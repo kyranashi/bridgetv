@@ -95,6 +95,38 @@ public class MainActivity extends Activity {
         web.loadUrl("file:///android_asset/www/web/index.html");
     }
 
+    // ------------------------------------------------------------------ голосовой поиск (1.0.0)
+    private static final int REQ_VOICE = 41;
+
+    /** Системное окно распознавания речи (на Android TV — кнопка микрофона пульта работает так же) */
+    void startVoice() {
+        Intent i = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        i.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
+        i.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
+        i.putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Что найти?");
+        i.putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        try { startActivityForResult(i, REQ_VOICE); }
+        catch (Exception e) { voiceResult(null, "нет распознавания речи"); }
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req != REQ_VOICE) return;
+        java.util.ArrayList<String> r = data != null ? data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS) : null;
+        if (res == RESULT_OK && r != null && !r.isEmpty()) voiceResult(r.get(0), null);
+        else voiceResult(null, null);
+    }
+
+    private void voiceResult(String text, String err) {
+        try {
+            org.json.JSONObject o = new org.json.JSONObject();
+            if (text != null) o.put("text", text.length() > 200 ? text.substring(0, 200) : text);
+            if (err != null) o.put("err", err);
+            web.evaluateJavascript("TV.nativeEvent&&TV.nativeEvent('voice'," + o.toString() + ")", null);
+        } catch (Exception ignored) { }
+    }
+
     void openExternal(String url) {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) { }
     }

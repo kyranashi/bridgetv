@@ -354,3 +354,19 @@ html:not(.lite) .p-opts.open, html:not(.lite) #toast.show { -webkit-animation: b
 
 /* картинки появляются мягко */
 html:not(.lite) .card img { -webkit-transition: opacity .25s; transition: opacity .25s; }
+
+/* ================= 1.0.0: эфир, программа, шрифт, детский режим ================= */
+[data-p=dvrback], [data-p=golive] { display: none; }
+#player.live.dvr [data-p=dvrback], #player.live.dvr [data-p=play] { display: inline-block; }
+#player.live.dvr.behind [data-p=golive] { display: inline-block; background: #dc2626; color: #fff; }
+.p-epg { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 15px; color: #d6dce6; }
+.p-epg b { display: inline-block; width: 52px; color: #8a94a6; font-weight: 600; }
+.p-epg.past { opacity: 0.45; }
+.p-epg.on { color: #fff; } .p-epg.on b { color: #14b8a6; }
+.card.ch .nm small { display: block; font-size: 12px; font-weight: 400; color: #8a94a6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+/* Крупный текст: масштаб всего интерфейса (zoom есть в Safari iOS 9, Chrome, старых ТВ-браузерах) */
+html.font115 #app, html.font115 #toast { zoom: 1.15; }
+html.font130 #app, html.font130 #toast { zoom: 1.3; }
+.kids-bar { margin: 8px 0 12px; padding: 10px 14px; border-radius: 14px; background: linear-gradient(135deg, rgba(79,70,229,.25), rgba(20,184,166,.25)); display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: space-between; justify-content: space-between; }
+.mic { font-size: 18px; }
+textarea.code { width: 100%; min-height: 110px; background: #0f141f; color: #e8ecf3; border: 1px solid #2a3346; border-radius: 12px; padding: 10px; font: 13px/1.4 monospace; box-sizing: border-box; }

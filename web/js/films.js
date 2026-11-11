@@ -139,6 +139,7 @@
 
   /* События от приложения: {id, got, size} — прогресс; {id, file, done:true} — готово; {id, err} — ошибка */
   TV.nativeEvent = function (name, data) {
+    if (name === 'voice') { TV.emit('voice', data || {}); return; }       // голосовой поиск (Android, 1.0.0)
     if (name !== 'dl' || !data) return;
     var list = D.all(), d = TV.find(list, function (x) { return x.id === data.id; });
     if (!d) return;

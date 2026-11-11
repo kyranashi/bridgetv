@@ -1,7 +1,7 @@
 {
   "name": "bridgetv-desktop",
   "productName": "BridgeTV",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "BridgeTV — телеканалы, видео и фильмы на ПК (Windows, Linux)",
   "author": "kyranashi",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "dist": "electron-builder --publish never"
   },
   "devDependencies": {
-    "electron": ">=38.0.0",
+    "electron": "^45.3.0",
     "electron-builder": "^26.0.0"
   },
   "build": {

@@ -34,6 +34,7 @@
       '    <div class="p-title"><b></b><span></span></div>' +
       '    <button class="pbtn" data-p="dl" aria-label="Скачать" title="Скачать на устройство">⬇</button>' +
       '    <button class="pbtn" data-p="opts" aria-label="Качество, озвучка, субтитры" title="Качество, озвучка, субтитры">⚙</button>' +
+      '    <button class="pbtn" data-p="guide" aria-label="Программа передач" title="Программа передач">📋</button>' +
       '    <button class="pbtn" data-p="fav" aria-label="В избранное">☆</button>' +
       '    <button class="pbtn" data-p="list" aria-label="Список">☰</button>' +
       '  </div>' +
@@ -42,6 +43,8 @@
       '    <div class="p-row">' +
       '      <button class="pbtn big" data-p="prev">◀</button>' +
       '      <button class="pbtn big" data-p="back10">−10</button>' +
+      '      <button class="pbtn big" data-p="dvrback" title="Назад по эфиру">−30</button>' +
+      '      <button class="pbtn" data-p="golive" title="Вернуться в прямой эфир">В эфир</button>' +
       '      <button class="pbtn big" data-p="play">❚❚</button>' +
       '      <button class="pbtn big" data-p="fwd10">+10</button>' +
       '      <button class="pbtn big" data-p="next">▶</button>' +
@@ -69,7 +72,7 @@
     video.addEventListener('timeupdate', onTime, false);
     video.addEventListener('pause', function () { setPlayIcon(); }, false);
     video.addEventListener('play', function () { setPlayIcon(); }, false);
-    video.addEventListener('ended', function () { if (state && !state.live) P.step(1); }, false);
+    video.addEventListener('ended', function () { if (state && !state.live) nextSoon(); }, false);
 
     // Свайпы: ◀ ▶ — канал, вниз — закрыть
     var sx, sy, st;
@@ -148,7 +151,7 @@
     if (state.isCh && ch) {
       state.ch = ch; state.live = true;
       state.variants = TV.health.variants(ch);
-      setTitle(ch.n, (ch.num ? '№' + ch.num + ' · ' : '') + regionName(ch.r));
+      setTitle(ch.n, chSub(ch));
       TV.history.add({ k: 'ch', id: ch.id, n: ch.n, img: ch.l });
       tryVariant();
     } else if (it.k === 'yt' && TV.yt.mode() !== 'mirror') {
@@ -228,7 +231,7 @@
       clearTimeout(embedT); busy(false);
       if (!state.started) { state.started = true; scheduleHide(); }
     } else if (d.ev === 'ended') {
-      if (state.items.length > 1) P.step(1);
+      nextSoon();
     } else if (d.ev === 'error') {
       clearTimeout(embedT);
       var why = d.code === 101 || d.code === 150 || d.code === 152 || d.code === 153
@@ -450,6 +453,7 @@
   /* ------------------------------------------------------------ движок */
   function stop() {
     stopEmbed();
+    cancelNext();
     if (state) state.embed = false;
     clearTimeout(srcT); clearInterval(posT);
     if (hls) { try { hls.destroy(); } catch (e) {} hls = null; }
@@ -548,6 +552,80 @@
   /* ------------------------------------------------------------ интерфейс */
   function setTitle(t, s) { $('.p-title b').textContent = t || ''; $('.p-title span').textContent = s || ''; }
 
+  /* ------------------------------------------------------------ программа передач (1.0.0) */
+  function chSub(ch) {
+    var base = (ch.num ? '№' + ch.num + ' · ' : '') + regionName(ch.r), e = TV.epg && TV.epg.now(ch.id);
+    if (!e) return base;
+    return 'Сейчас: ' + e.cur.t + ' (до ' + TV.epg.hm(e.cur.b) + ')' + (e.next ? ' · Далее: ' + e.next.t : '');
+  }
+  function refreshEpg() {
+    if (!state || !state.ch) return;
+    $('.p-title span').textContent = chSub(state.ch);
+    $('[data-p=guide]').style.display = TV.epg && TV.epg.list(state.ch.id).length ? '' : 'none';
+  }
+  TV.on('epg', refreshEpg);
+  setInterval(refreshEpg, 60000);
+  var DAYS = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+  var MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  function openGuide() {
+    if (!state || !state.ch) return;
+    $('.p-side').className = 'p-side';
+    var l = TV.epg.list(state.ch.id), t = TV.now(), day = '', h = '<div class="p-opts-in"><div class="p-opts-h">Программа<button class="pbtn" data-p="optsclose">✕</button></div>';
+    TV.each(l, function (p) {
+      if (p.b < t - 36e5) return;
+      var dt = new Date(p.a), d = DAYS[dt.getDay()] + ', ' + dt.getDate() + ' ' + MONTHS[dt.getMonth()];   // без Intl — его нет в Safari iOS 9
+      if (d !== day) { day = d; h += '<h4>' + TV.esc(d) + '</h4>'; }
+      var on = p.a <= t && t < p.b;
+      h += '<div class="p-epg' + (on ? ' on' : '') + (p.b <= t ? ' past' : '') + '"><b>' + TV.epg.hm(p.a) + '</b> ' + TV.esc(p.t) + '</div>';
+    });
+    if (!l.length) h += '<p class="note">Для этого канала программы нет.</p>';
+    h += '<p class="note">Источник: открытый гид epg.pw. Время — по часам устройства.</p></div>';
+    var o = $('.p-opts'); o.innerHTML = h; o.className = 'p-opts open';
+    var cur = TV.$('.p-epg.on', o); if (cur) o.scrollTop = cur.offsetTop - 80;
+    showUi(true);
+  }
+
+  /* ------------------------------------------------------------ перемотка эфира (1.0.0) */
+  /* Многие трансляции HLS держат «окно» последних минут (DVR). Если окно больше минуты —
+     показываем «−30» и «В эфир». */
+  function dvrWindow() {
+    var s = video.seekable;
+    if (!s || !s.length) return null;
+    var a = s.start(0), b = s.end(s.length - 1);
+    return b - a > 60 && isFinite(b) ? { a: a, b: b } : null;
+  }
+  function liveTick() {
+    if (!state || !(state.live || state.isCh)) return;
+    var w = dvrWindow(), behind = w ? w.b - video.currentTime : 0;
+    var c = el.className.replace(/\s*\b(dvr|behind)\b/g, '');
+    if (w) c += ' dvr';
+    if (w && behind > 20) c += ' behind';
+    if (c !== el.className) el.className = c;
+  }
+  P.liveSeek = function (d) {
+    var w = dvrWindow();
+    if (!w) return false;
+    video.currentTime = Math.max(w.a + 2, Math.min(w.b - 3, video.currentTime + d));
+    liveTick(); showUi();
+    return true;
+  };
+
+  /* ------------------------------------------------------------ следующая серия (1.0.0) */
+  var nextT = null;
+  function cancelNext() { clearInterval(nextT); nextT = null; }
+  function nextSoon() {
+    if (!state || state.items.length < 2 || state.index >= state.items.length - 1) return;
+    if (!TV.settings.nextEp) return;
+    cancelNext();
+    var left = 5, nx = state.items[state.index + 1];
+    var show = function () { msg('Далее: ' + (nx.n || '') + ' — через ' + left + ' с', [['nextnow', '▶ Смотреть сейчас'], ['nextcancel', 'Отмена']]); };
+    show();
+    nextT = setInterval(function () {
+      if (!state) return cancelNext();
+      if (--left <= 0) { cancelNext(); P.step(1); } else show();
+    }, 1000);
+  }
+
   function busy(on, text) {
     var st = $('.p-status');
     st.className = 'p-status' + (on ? ' busy' : '');
@@ -583,6 +661,7 @@
     var favIt = state.ch ? { k: 'ch', id: state.ch.id, n: state.ch.n, img: state.ch.l } : it;
     $('[data-p=fav]').textContent = favIt && TV.fav.has(favIt) ? '★' : '☆';
     $('[data-p=src]').style.display = state.isCh && state.variants.length > 1 ? '' : 'none';
+    $('[data-p=guide]').style.display = state.ch && TV.epg && TV.epg.list(state.ch.id).length ? '' : 'none';
     // ⚙ — только в режиме зеркала (у официального плеера YouTube своё меню качества, озвучки и субтитров)
     $('[data-p=opts]').style.display = it && it.k === 'yt' && !state.live && !state.embed ? '' : 'none';
     $('[data-p=dl]').style.display = TV.dl && TV.dl.canDownload(it) && !TV.dl.get(it.k + ':' + (it.id || it.u)) ? '' : 'none';
@@ -591,6 +670,7 @@
   function setPlayIcon() { if (el) $('[data-p=play]').textContent = video.paused ? '▶' : '❚❚'; }
 
   function onTime() {
+    if (state && (state.live || state.isCh)) { liveTick(); return; }
     if (!state || state.live) return;
     var d = video.duration;
     if (!d || !isFinite(d)) return;
@@ -656,6 +736,7 @@
 
   P.togglePlay = function () { if (video.paused) playSafe(); else video.pause(); showUi(); };
   P.seek = function (d) {
+    if (state && (state.live || state.isCh)) { P.liveSeek(d < 0 ? -30 : 30); return; }
     if (state && !state.live && video.duration) { video.currentTime = Math.max(0, Math.min(video.duration - 1, video.currentTime + d)); showUi(); }
   };
   P.isLive = function () { return !!(state && (state.live || state.isCh)); };
@@ -677,6 +758,11 @@
     if (a === 'sideclose') { $('.p-side').className = 'p-side'; scheduleHide(); return; }
     if (a.indexOf('opt:') === 0) { var parts = a.split(':'); setTrackOption(parts[1], parts.slice(2).join(':')); return; }
     if (a === 'opts') { openOpts(); return; }
+    if (a === 'guide') { openGuide(); return; }
+    if (a === 'nextcancel') { cancelNext(); busy(false); scheduleHide(); return; }
+    if (a === 'nextnow') { cancelNext(); P.step(1); return; }
+    if (a === 'dvrback') { P.liveSeek(-30); return; }
+    if (a === 'golive') { var w = dvrWindow(); if (w) { video.currentTime = w.b - 3; liveTick(); } return; }
     if (a === 'optsclose') { closeOpts(); return; }
     if (a === 'dl') {
       TV.dl.start(cur(), function (err) { TV.toast(err ? 'Не получилось: ' + err : '⬇ Скачивается — Фильмы → Загрузки'); renderUi(); });

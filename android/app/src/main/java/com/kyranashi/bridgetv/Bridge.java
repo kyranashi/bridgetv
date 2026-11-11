@@ -93,6 +93,8 @@ public class Bridge {
             o.put("sdk", Build.VERSION.SDK_INT);
             o.put("model", Build.MODEL);
             o.put("fileBase", Uri.fromFile(dlDir).toString() + "/");
+            // Голосовой поиск (1.0.0): есть ли системное распознавание речи (Google / Android TV)
+            o.put("voice", android.speech.SpeechRecognizer.isRecognitionAvailable(act));
             return o.toString();
         } catch (Exception e) { return "{\"platform\":\"android\"}"; }
     }
@@ -126,6 +128,9 @@ public class Bridge {
         if ("fetch".equals(cmd)) pool.execute(new Runnable() { public void run() { fetch(m); } });
         else if ("save".equals(cmd)) save(m.optString("key"), m.isNull("value") ? null : m.optString("value"));
         else if ("awake".equals(cmd)) awake(m.optBoolean("on"));
+        else if ("voice".equals(cmd) && act instanceof MainActivity) {
+            act.runOnUiThread(new Runnable() { public void run() { ((MainActivity) act).startVoice(); } });
+        }
         else if ("open".equals(cmd)) { if (isWeb(m.optString("url"))) open(m.optString("url")); }
         else if ("download".equals(cmd) && isWeb(m.optString("url")) && m.optString("id").length() > 0 && m.optString("id").length() <= 2048) new Thread(new Runnable() { public void run() { download(m.optString("id"), m.optString("url")); } }).start();
         else if ("dlDelete".equals(cmd)) { String f = m.optString("file"); if (f.length() > 0) new File(dlDir, new File(f).getName()).delete(); }

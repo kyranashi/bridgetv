@@ -176,7 +176,7 @@
       if (!TV.yt.hasKey()) return cb('для поиска нужен ключ YouTube API (Ещё → Настройки)');
       var order = o.sort === 'upload_date' ? 'date' : o.sort === 'view_count' ? 'viewCount' : 'relevance';
       var type = o.type === 'channel' ? 'channel' : o.type === 'all' ? 'video,channel' : 'video';
-      var url = API + 'search?part=snippet&maxResults=25&regionCode=BY&relevanceLanguage=ru&safeSearch=moderate&q=' + enc(q) +
+      var url = API + 'search?part=snippet&maxResults=25&regionCode=BY&relevanceLanguage=ru&safeSearch=' + (TV.settings.kids ? 'strict' : 'moderate') + '&q=' + enc(q) +
         '&type=' + type + '&order=' + order + (o.live ? '&eventType=live' : '') +
         (o.duration && type === 'video' ? '&videoDuration=' + o.duration : '');
       var key = 's_' + q + '_' + type + order + (o.live ? 'L' : '') + (o.duration || '') + (o.page || 1);

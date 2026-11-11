@@ -283,4 +283,54 @@
       TV.catalog.load();
     }
   };
+
+  /* ------------------------------------------------------------ программа передач (1.0.0) */
+  /* data/epg.json собирает tools/build_epg.py раз в день и публикует на GitHub Pages.
+     { built, ch: { id канала: [[начало, конец, название], …] } }, время — unix-секунды.
+     Держим только в памяти (≈1 МБ — в localStorage старого iPad не поместится вместе с каталогом)
+     и перезагружаем раз в 6 часов. */
+  var EPG = null, epgT = 0, epgBusy = false;
+  function epgSources() {
+    var s = [];
+    if (/^https?:/.test(location.protocol)) s.push('../data/epg.json');     // свой сервер / GitHub Pages
+    if (TV.PAGES) s.push(TV.PAGES + '/data/epg.json');
+    return s;
+  }
+  TV.epg = {
+    ready: function () { return !!EPG; },
+    load: function (cb) {
+      if (EPG && TV.now() - epgT < 6 * 36e5) { if (cb) cb(null); return; }
+      if (epgBusy || !TV.settings.epg) { if (cb) cb('busy'); return; }
+      epgBusy = true;
+      var src = epgSources(), i = 0;
+      (function next(lastErr) {
+        if (i >= src.length) { epgBusy = false; if (cb) cb(lastErr || 'нет программы'); return; }
+        TV.ajax(src[i++] + '?d=' + Math.floor(TV.now() / 36e5), { timeout: 30000 }, function (err, j) {
+          if (err || !j || !j.ch || typeof j.ch !== 'object') return next(err || 'формат');
+          EPG = j.ch; epgT = TV.now(); epgBusy = false;
+          TV.emit('epg');
+          if (cb) cb(null);
+        });
+      })('');
+    },
+    /* Передачи канала: [{a, b, t}] (a, b — мс) */
+    list: function (id) {
+      var l = EPG && EPG[id], out = [];
+      if (!TV.isArray(l)) return out;
+      for (var i = 0; i < l.length; i++) {
+        var p = l[i];
+        if (TV.isArray(p) && typeof p[2] === 'string') out.push({ a: p[0] * 1000, b: p[1] * 1000, t: p[2] });
+      }
+      return out;
+    },
+    /* Что идёт сейчас и далее: { cur, next, pct } или null */
+    now: function (id) {
+      var l = TV.epg.list(id), t = TV.now();
+      for (var i = 0; i < l.length; i++) {
+        if (l[i].a <= t && t < l[i].b) return { cur: l[i], next: l[i + 1] || null, pct: Math.round((t - l[i].a) / (l[i].b - l[i].a) * 100) };
+      }
+      return null;
+    },
+    hm: function (ms) { var d = new Date(ms), m = d.getMinutes(); return d.getHours() + ':' + (m < 10 ? '0' : '') + m; }
+  };
 })();

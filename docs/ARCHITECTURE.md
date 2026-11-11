@@ -107,6 +107,18 @@
 - `yt.html` лежит на GitHub Pages (`TV.PAGES`), потому что YouTube требует у встроенного плеера настоящий Referer, а у страниц из `file://` и своих схем его нет.
 - Превью — с `i.ytimg.com`.
 
+### 2.5b. Функции 1.0.0
+
+| Функция | Где | Как |
+|---|---|---|
+| Программа передач | `tools/build_epg.py` → GitHub Pages `data/epg.json`; `data.js: TV.epg` | в памяти, обновление раз в 6 ч; `player.js: chSub/openGuide`, `app.js: epgNow` |
+| Перемотка эфира | `player.js: dvrWindow/liveTick/P.liveSeek` | окно `video.seekable` > 60 с → классы `dvr`, `behind` |
+| Следующая серия | `player.js: nextSoon` | 5-секундный отсчёт, настройка `nextEp` |
+| Детский режим | `core.js: TV.blocked`, `app.js: feedsList/archList/ytSearchShelves/pinGate/S.pin` | только `kids`, PIN |
+| Крупный текст | `core.js: applyMode` + CSS `zoom` | классы `font115`, `font130` |
+| Перенос избранного | `app.js: exportBackup/importBackup/S.backup` | `BTV1:` + base64(JSON) |
+| Голосовой поиск | `app.js: voiceOk/startVoice`; Android `MainActivity.startVoice` | Web Speech API или `RecognizerIntent` → `TV.nativeEvent('voice')` |
+
 ### 2.5a. Возможности устройства (`TV.caps`, с 0.3.0)
 
 `core.js` проверяет `canPlayType` и `MediaSource.isTypeSupported`: `h264`, `hevc`, `vp9`, `av1`, `webm`, `mkv`, `hls`, `maxH` (720 на старых, 1080, 2160 на 4K-экранах с HEVC/VP9). `TV.caps.file(name)` — сможет ли устройство сыграть файл (используют фильмы с ПК). Показывается в Настройках → «Ваше устройство».

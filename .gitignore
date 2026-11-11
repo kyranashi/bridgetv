@@ -32,3 +32,6 @@ desktop/package-lock.json
 # Только на ПК разработчика (не публикуются)
 ios/legacy/
 docs/archive/
+
+# Программа передач — собирается в CI и публикуется на GitHub Pages, в репозиторий не коммитится
+data/epg.json

@@ -56,13 +56,18 @@
     return '<img src="' + esc(remoteLogo(url)) + '" alt="" onerror="this.style.display=\'none\'">';
   }
 
+  /* «Сейчас в эфире» под названием канала (программа передач, 1.0.0) */
+  function epgNow(c) {
+    var e = TV.epg && TV.epg.now(c.id);
+    return e ? '<small>' + esc(e.cur.t) + '</small>' : '';
+  }
   function chCard(c, l, i) {
     var st = TV.health.status(c);
     var fav = TV.fav.has({ k: 'ch', id: c.id });
     return '<button class="card ch st-' + st + '" data-a="play" data-l="' + l + '" data-i="' + i + '">' +
       '<span class="num">' + (c.num || '') + '</span>' +
       '<span class="logo"><b>' + initials(c.n) + '</b>' + chLogo(c) + '</span>' +
-      '<span class="nm">' + esc(c.n) + '</span>' +
+      '<span class="nm">' + esc(c.n) + epgNow(c) + '</span>' +
       '<span class="meta"><i class="dot"></i>' + (fav ? '<i class="star">★</i>' : '') + '</span>' +
       '</button>';
   }
@@ -188,7 +193,8 @@
     var h = '<div class="pills">' + chips(pills, region, 'region').replace('</div>', '') +
       '<button class="chip ghost" data-a="go" data-x="more/extra">🌍 Другие страны ›</button></div></div>';
     // Продолжить просмотр
-    var hist = TV.filter(TV.history.all(), function (x) { return x.k === 'ch' && TV.catalog.byId(x.id); });
+    if (TV.settings.kids) h = '<div class="kids-bar"><b>🧸 Детский режим</b><button class="btn" data-a="kidsExit">Выйти (PIN)</button></div>' + h;
+    var hist = TV.filter(TV.history.all(), function (x) { return x.k === 'ch' && TV.catalog.byId(x.id) && !TV.blocked(TV.catalog.byId(x.id)); });
     if (hist.length) {
       var hc = []; TV.each(hist.slice(0, 12), function (x) { hc.push(TV.catalog.byId(x.id)); });
       h += shelf('▶ Продолжить', hc, 'hist');
@@ -203,11 +209,31 @@
     return { title: r.flag + ' ' + r.name, html: channelList(p.id, 'reg-' + p.id) };
   };
 
+  /* ---------- Голосовой поиск (1.0.0) ----------
+     Android / Android TV — системное распознавание речи через мост (TV_NATIVE.voice);
+     Chrome, Edge, Safari 14.5+ — Web Speech API. В программе для ПК и старых браузерах кнопки нет. */
+  function voiceOk() {
+    if (window.TV_NATIVE && window.TV_NATIVE.voice) return true;
+    return TV.platform === 'web' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  }
+  function startVoice() {
+    if (window.TV_NATIVE && window.TV_NATIVE.voice) { TV.callNative({ cmd: 'voice' }); TV.toast('🎤 Говорите…'); return; }
+    var R = window.SpeechRecognition || window.webkitSpeechRecognition;
+    try {
+      var r = new R();
+      r.lang = 'ru-RU'; r.maxAlternatives = 1; r.interimResults = false;
+      r.onresult = function (e) { var t = e.results && e.results[0] && e.results[0][0] && e.results[0][0].transcript; if (t) TV.emit('voice', { text: t }); };
+      r.onerror = function (e) { TV.toast(e && e.error === 'not-allowed' ? 'Нет доступа к микрофону' : 'Не расслышал, попробуйте ещё'); };
+      r.start(); TV.toast('🎤 Говорите…');
+    } catch (e) { TV.toast('Голосовой поиск недоступен'); }
+  }
+
   /* ---------- Поиск ---------- */
   var POPULAR = ['новости', 'мультфильмы', 'футбол', 'музыка', 'фильм', 'Беларусь 1', 'НТВ', 'прямой эфир'];
   S.search = function () {
     var h = '<form class="sbar" data-form="search" action="#"><input type="search" name="q" id="q" autocomplete="off" ' +
       'autocorrect="off" placeholder="Каналы, видео, эфиры, фильмы" value="' + esc(ui.q) + '">' +
+      (voiceOk() ? '<button class="sbtn mic" type="button" data-a="voice" aria-label="Голосовой поиск" title="Сказать">🎤</button>' : '') +
       '<button class="sbtn" type="submit">Найти</button></form><div id="sugg" class="sugg"></div>';
     if (!ui.res) {
       var hist = TV.searches.all();
@@ -372,13 +398,17 @@
       });
   }
   /* Полки: с ключом/зеркалом — рубрики; без них — официальные каналы киностудий (RSS) */
+  /* Детский режим (родительский контроль): только детские подборки */
+  function feedsList() { return TV.settings.kids ? TV.filter(TV.yt.feeds, function (f) { return f.id === 'kidsnew'; }) : TV.yt.feeds; }
+  function archList() { return TV.settings.kids ? TV.filter(TV.arch.shelves, function (s) { return s.id === 'toons'; }) : TV.arch.shelves; }
+  function ytSearchShelves() { return TV.settings.kids ? TV.filter(TV.yt.shelves, function (s) { return s.id === 'kids'; }) : TV.yt.shelves; }
   function ytShelves() {
     var m = TV.yt.mode();
     if (m === 'none') return [];
     var out = [];
     // RSS-ленты официальных каналов — в приложении (без ключа) или через API (с ключом)
-    if (m === 'official' && (TV.native || TV.yt.hasKey())) TV.each(TV.yt.feeds, function (f) { out.push({ id: 'f-' + f.id, title: f.title, feed: f }); });
-    if (TV.yt.canSearch()) out = out.slice(0, 3).concat(TV.yt.shelves).concat(out.slice(3));   // новинки — первыми
+    if (m === 'official' && (TV.native || TV.yt.hasKey())) TV.each(feedsList(), function (f) { out.push({ id: 'f-' + f.id, title: f.title, feed: f }); });
+    if (TV.yt.canSearch()) out = out.slice(0, 3).concat(ytSearchShelves()).concat(out.slice(3));   // новинки — первыми
     return out;
   }
   function loadYtShelves() {
@@ -458,8 +488,8 @@
       if (cont.length) h += shelf('⏯ Продолжить просмотр', cont.slice(0, 15), 'mv-cont');
       var ready = TV.filter(dls, function (d) { return d.done; });
       if (ready.length) { var di = []; TV.each(ready, function (d) { di.push(TV.dl.item(d)); }); h += shelf('📥 Скачанные', di, 'mv-dl', 'go', 'movies/downloads'); }
-      if (ytFeedsOk()) TV.each(TV.yt.feeds, function (f) { h += placeholder('fdsh-' + f.id, f.title); });
-      TV.each(TV.arch.shelves, function (s) { h += placeholder('arsh-' + s.id, s.title); });
+      if (ytFeedsOk()) TV.each(feedsList(), function (f) { h += placeholder('fdsh-' + f.id, f.title); });
+      TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, s.title); });
       h += '<p class="note">Новинки — трейлеры и премьеры с официальных каналов прокатчиков и онлайн-кинотеатров; аниме — с официальных ' +
         'каналов правообладателей. «Архив кино» — фильмы в общественном достоянии (archive.org). Фильмы из архива, свои ссылки и файлы с ПК можно скачать на устройство (кнопка ⬇ в плеере).</p>';
     }
@@ -528,11 +558,11 @@
   function loadArchShelves() {
     // Очередь: сначала официальные киностудии (YouTube), потом архив
     var jobs = [];
-    if (ytFeedsOk()) TV.each(TV.yt.feeds, function (f) {
+    if (ytFeedsOk()) TV.each(feedsList(), function (f) {
       jobs.push({ ph: 'fdsh-' + f.id, key: 'fd:' + f.id, title: f.title, l: 'fdl-' + f.id,
         load: function (cb) { TV.yt.feed(f, cb); } });
     });
-    TV.each(TV.arch.shelves, function (s) {
+    TV.each(archList(), function (s) {
       jobs.push({ ph: 'arsh-' + s.id, key: 'ar:' + s.id, title: s.title, l: 'arl-' + s.id, more: s.id,
         load: function (cb) { TV.arch.query(s.q, 40, cb); } });
     });
@@ -657,7 +687,67 @@
     return '<button class="row" data-a="set" data-x="' + name + '"><span class="rt"><b>' + esc(title) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') +
       '</span><span class="switch' + (TV.settings[name] ? ' on' : '') + '"><i></i></span></button>';
   }
+  /* ---------- Родительский контроль (1.0.0) ----------
+     PIN задаётся в Настройках; в детском режиме Настройки и выход из режима — только по PIN.
+     PIN хранится на устройстве (это защита от ребёнка, а не от взлома). */
+  var pinOk = false;
+  S.pin = function () {
+    var h = '<section class="box"><h3>🔒 Родительский контроль</h3><p class="note">Введите PIN, чтобы открыть настройки или выключить детский режим.</p>' +
+      '<form class="form" data-form="pin" action="#"><input name="u" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="PIN">' +
+      '<button class="btn primary" type="submit">Открыть</button></form></section>';
+    return { title: '🔒 PIN', html: h };
+  };
+  function pinGate() { return TV.settings.kids && /^\d{4}$/.test(TV.settings.pin || '') && !pinOk; }
+
+  /* ---------- Перенос избранного и настроек (1.0.0) ----------
+     Код = base64(JSON) с избранным, подписками, ссылками, плейлистами, историей поиска и настройками.
+     Ключ YouTube и PIN не переносятся. Без сервера: код копируется или сохраняется файлом. */
+  var BK_KEYS = ['fav', 'subs', 'links', 'playlists', 'searches', 'pos'];
+  function exportBackup() {
+    var o = { app: 'BridgeTV', v: 1, t: TV.now(), data: {}, settings: {} };
+    TV.each(BK_KEYS, function (k) { var v = TV.store.get(k, null); if (v != null) o.data[k] = v; });
+    for (var k in TV.settings) if (TV.settings.hasOwnProperty(k) && k !== 'ytKey' && k !== 'pin' && k !== 'kids') o.settings[k] = TV.settings[k];
+    try { return 'BTV1:' + btoa(unescape(encodeURIComponent(JSON.stringify(o)))); } catch (e) { return ''; }
+  }
+  function importBackup(code) {
+    code = String(code || '').replace(/\s+/g, '');
+    if (code.indexOf('BTV1:') !== 0 || code.length > 4e6) return 0;
+    var o;
+    try { o = JSON.parse(decodeURIComponent(escape(atob(code.slice(5))))); } catch (e) { return 0; }
+    if (!o || o.app !== 'BridgeTV' || typeof o.data !== 'object') return 0;
+    var n = 0;
+    TV.each(BK_KEYS, function (k) { if (o.data[k] != null && typeof o.data[k] === 'object') { TV.store.set(k, o.data[k]); n++; } });
+    if (o.settings && typeof o.settings === 'object') {
+      for (var k in o.settings) if (o.settings.hasOwnProperty(k) && TV.defaults.hasOwnProperty(k) && k !== 'ytKey' && k !== 'pin' && k !== 'kids' &&
+        typeof o.settings[k] === typeof TV.defaults[k]) TV.settings[k] = o.settings[k];
+      TV.saveSettings(); n++;
+    }
+    var favs = (o.data.fav && o.data.fav.length) || 0;
+    return n ? (favs ? favs + ' в избранном' : 'настройки') : 0;
+  }
+  function saveBackupFile() {
+    var code = exportBackup();
+    try {
+      var a = document.createElement('a');
+      a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(code);
+      a.download = 'BridgeTV-перенос.txt';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    } catch (e) { TV.toast('Не получилось — скопируйте код'); }
+  }
+  S.backup = function () {
+    var h = '<section class="box"><h3>📤 Перенести на другое устройство</h3><p class="note">Скопируйте этот код (или сохраните файлом) и вставьте на другом устройстве ниже. ' +
+      'В коде — избранное, подписки, ссылки, плейлисты и настройки. Ключ YouTube и PIN не переносятся.</p>' +
+      '<textarea class="code" id="bk-out" readonly>' + esc(exportBackup()) + '</textarea>' +
+      '<div class="tools"><button class="btn primary" data-a="backupCopy">Копировать</button>' +
+      (TV.native ? '' : '<button class="btn" data-a="backupFile">Сохранить файлом</button>') + '</div></section>' +
+      '<section class="box"><h3>📥 Получить с другого устройства</h3><p class="note">Вставьте код. Избранное и настройки этого устройства заменятся.</p>' +
+      '<textarea class="code" id="bk-in" placeholder="BTV1:…"></textarea>' +
+      '<div class="tools"><button class="btn primary" data-a="backupLoad">Загрузить</button></div></section>';
+    return { title: '🔄 Перенос избранного', html: h };
+  };
+
   S.settings = function () {
+    if (pinGate()) return S.pin();
     var s = TV.settings;
     var h = '<div class="rows">' +
       '<label class="row"><span class="rt"><b>Режим устройства</b><small>Лёгкий: меньше анимаций и картинок, качество до 480p, экономия памяти</small></span>' +
@@ -667,6 +757,14 @@
       sw('logos', 'Логотипы каналов', 'Выключите на очень медленном интернете') +
       sw('safe', 'Безопасный режим', 'Скрывать источники, признанные нежелательными в РФ или экстремистскими в РБ (см. Помощь → Правовая информация)') +
       sw('showYT', 'Вкладка «Видео» (YouTube)', 'Видео и подборки YouTube. Выключите, если не нужно') +
+      sw('epg', 'Программа передач', 'Что идёт сейчас и дальше — на карточках каналов и в плеере (📋)') +
+      sw('nextEp', 'Следующее видео автоматически', 'В конце видео или серии — следующее через 5 секунд') +
+      '<label class="row"><span class="rt"><b>Размер текста</b><small>Крупнее — удобнее издалека и для пожилых</small></span>' +
+      sel('font', [['100', 'Обычный'], ['115', 'Крупный'], ['130', 'Очень крупный']], s.font) + '</label>' +
+      '</div><div class="sh-h"><h3>Родительский контроль</h3></div><div class="rows">' +
+      '<label class="row"><span class="rt"><b>PIN</b><small>4 цифры. Нужен, чтобы выйти из детского режима и открыть настройки</small></span>' +
+      '<input data-set="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="····" value="' + esc(s.pin) + '"></label>' +
+      sw('kids', 'Детский режим', 'Только детские каналы, мультфильмы и строгий безопасный поиск YouTube') +
       '<label class="row"><span class="rt"><b>Ждать источник</b><small>Сколько секунд ждать ответа, прежде чем перейти к резервному</small></span>' +
       sel('timeout', [[8, '8 с'], [12, '12 с'], [16, '16 с'], [20, '20 с']], s.timeout) + '</label>' +
       '</div><div class="sh-h"><h3>Видео YouTube</h3></div><div class="rows">' +
@@ -682,6 +780,7 @@
       '<input data-set="catalogUrl" type="url" placeholder="https://…/catalog.json" value="' + esc(s.catalogUrl) + '"></label>' +
       row('updateCatalog', '', '🔄', 'Обновить каталог сейчас', '', '') +
       '</div><div class="sh-h"><h3>Данные</h3></div><div class="rows">' +
+      row('go', 'more/backup', '🔄', 'Перенести избранное на другое устройство', 'Код или файл — без регистрации', '›') +
       row('clearHistory', '', '🕘', 'Очистить историю просмотра', '', '') +
       row('resetHealth', '', '🩺', 'Сбросить отметки «не работает»', '', '') +
       row('resetAll', '', '⚠️', 'Сбросить всё', 'Избранное, настройки, ссылки', '') +
@@ -883,9 +982,26 @@
       case 'delpl': if (confirm('Удалить плейлист?')) { TV.playlists.remove(x); render(true); } break;
       case 'pcdir': push({ s: 'pc', url: x }); break;
       case 'set':
+        if (x === 'kids' && !TV.settings.kids && !/^\d{4}$/.test(TV.settings.pin || '')) { TV.toast('Сначала задайте PIN (4 цифры)'); break; }
         TV.settings[x] = !TV.settings[x]; TV.saveSettings();
-        if (x === 'showYT' || x === 'safe') { cache = {}; ui.res = null; buildTabs(); }
+        if (x === 'showYT' || x === 'safe' || x === 'kids') { cache = {}; ui.res = null; fm.res = null; yv.res = null; buildTabs(); }
+        if (x === 'kids') { pinOk = !TV.settings.kids; TV.toast(TV.settings.kids ? '🧸 Детский режим включён' : 'Детский режим выключен'); }
+        if (x === 'epg' && TV.settings.epg) TV.epg.load();
         render(true); break;
+      case 'kidsExit': push({ s: 'pin' }); break;
+      case 'voice': startVoice(); break;
+      case 'backupCopy': {
+        var ta = document.getElementById('bk-out');
+        if (ta) { ta.focus(); ta.select(); try { document.execCommand('copy'); TV.toast('Скопировано'); } catch (e2) { TV.toast('Выделено — скопируйте вручную'); } }
+        break;
+      }
+      case 'backupFile': saveBackupFile(); break;
+      case 'backupLoad': {
+        var inp = document.getElementById('bk-in'), r = importBackup(inp ? inp.value : '');
+        TV.toast(r ? 'Перенесено: ' + r : 'Код не подошёл — скопируйте его целиком');
+        if (r) { cache = {}; buildTabs(); setTimeout(function () { location.reload(); }, 900); }
+        break;
+      }
       case 'updateCatalog': updateCatalog(); break;
       case 'install': TV.openExternal(TV.PAGES + '/web/install.html'); break;
       case 'ext': if (/^https:\/\//.test(x)) TV.openExternal(x); break;
@@ -946,6 +1062,15 @@
     if (!f) return;
     e.preventDefault();
     var kind = f.getAttribute('data-form'), u = f.u ? f.u.value.replace(/^\s+|\s+$/g, '') : '', n = f.n ? f.n.value : '';
+    if (kind === 'pin') {
+      if (f.u.value === TV.settings.pin) {
+        pinOk = true;
+        if (top().s === 'pin') stacks[tab].pop();
+        if (TV.settings.kids && tab === 'tv') { TV.settings.kids = false; TV.saveSettings(); cache = {}; ui.res = null; buildTabs(); TV.toast('Детский режим выключен'); }
+        render();
+      } else { f.u.value = ''; TV.toast('Неверный PIN'); }
+      return;
+    }
     if (kind === 'search') { var q = f.q.value; if (document.activeElement) document.activeElement.blur(); runSearch(q); return; }
     if (kind === 'ytsearch' || kind === 'fmsearch') {
       if (document.activeElement) document.activeElement.blur();
@@ -1006,10 +1131,11 @@
       var k = e.target.getAttribute('data-set');
       if (!k) return;
       var v = e.target.value;
+      if (k === 'pin' && v && !/^\d{4}$/.test(v)) { TV.toast('PIN — ровно 4 цифры'); return; }
       TV.settings[k] = k === 'timeout' ? parseInt(v, 10) : v;
       TV.saveSettings();
       if (k === 'ytInstance' || k === 'ytKey' || k === 'ytSource') { cache = {}; yv.res = null; }
-      if (k === 'mode') render(true);
+      if (k === 'mode' || k === 'font') render(true);
       TV.toast('Сохранено');
     }, false);
     app.addEventListener('input', function (e) { if (e.target.id === 'q') suggest(e.target.value); }, false);
@@ -1028,6 +1154,17 @@
     }, false);
 
     TV.on('playerClosed', function () { render(true); });
+    // Программа передач пришла — обновить карточки каналов (без прокрутки)
+    TV.on('epg', function () { if ((tab === 'tv' || top().s === 'region') && !(TV.player && TV.player.isOpen())) render(true); });
+    // Голосовой поиск: распознанный текст — в поиск
+    TV.on('voice', function (d) {
+      if (!d || !d.text) { TV.toast(d && d.err ? 'Голосовой поиск: ' + d.err : 'Не расслышал'); return; }
+      ui.q = String(d.text).slice(0, 200);
+      if (tab !== 'search') switchTab('search', true);
+      runSearch(ui.q);
+    });
+    setTimeout(function () { TV.epg.load(); }, TV.lite() ? 6000 : 2500);
+    setInterval(function () { TV.epg.load(); }, 36e5);
     TV.on('fav', function () {});
     TV.on('dl', function () { if (top().s === 'downloads') render(true); });
     // Ход проверки каналов: обновляем только индикатор, а по окончании — весь экран

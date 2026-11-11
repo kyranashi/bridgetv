@@ -9,7 +9,7 @@ var TV = window.TV || {};
 window.TV = TV;
 
 TV.APP_NAME = 'BridgeTV';    // название; в коде объект по-прежнему называется TV
-TV.VERSION = '0.3.0';
+TV.VERSION = '1.0.0';
 /* Репозиторий на GitHub (владелец/имя) — отсюда приложения скачивают свежий каталог.
    Заполнить после публикации, напр. 'ivanov/tv'. Пусто — обновление только с локального сервера. */
 TV.REPO = 'kyranashi/bridgetv';
@@ -181,6 +181,8 @@ TV.BLOCKLIST = {
   names: /настоящее время|current time|телеканал дождь|tv ?rain|белсат|belsat|радыё свабода|радио свобода|radio svaboda|radio liberty|nexta|некста/i
 };
 TV.blocked = function (it) {
+  // Детский режим (родительский контроль, 1.0.0): из телеканалов — только детские
+  if (TV.settings && TV.settings.kids && it && it.c && !it.k && it.c !== 'kids') return true;
   if (!TV.settings || !TV.settings.safe || !it) return false;
   var B = TV.BLOCKLIST;
   if (it.id && (B.channels.indexOf(it.id) >= 0 || B.ytChannels.indexOf(it.id) >= 0)) return true;
@@ -260,14 +262,21 @@ TV.defaults = {
   ytKey: '',             // свой бесплатный ключ YouTube Data API v3 — поиск и подборки (docs/YOUTUBE.md)
   ytQuality: '720',      // качество видео YouTube: auto | 1080 | 720 | 480 | 360 (A5 уверенно тянет 720p)
   ytAudio: 'ru',         // озвучка: язык перевода, если есть (пусто — оригинал)
-  ytSubs: ''             // субтитры: язык или пусто — выключены
+  ytSubs: '',            // субтитры: язык или пусто — выключены
+  epg: true,             // программа передач (1.0.0)
+  nextEp: true,          // в конце видео/серии — следующее через 5 с
+  font: '100',           // размер текста: 100 | 115 | 130 (%)
+  kids: false,           // детский режим (родительский контроль): только детское
+  pin: ''                // PIN родительского контроля (4 цифры), хранится только на устройстве
 };
 TV.settings = TV.extend(TV.extend({}, TV.defaults), TV.store.get('settings', {}));
 TV.saveSettings = function () { TV.store.set('settings', TV.settings); TV.applyMode(); };
 TV.lite = function () { return TV.settings.mode === 'lite' || (TV.settings.mode === 'auto' && TV.device.old); };
 TV.applyMode = function () {
-  var c = document.documentElement.className.replace(/\s*(lite|tvmode|touch)\b/g, '');
+  var c = document.documentElement.className.replace(/\s*(lite|tvmode|touch|font115|font130|kids)\b/g, '');
   if (TV.lite()) c += ' lite';
+  if (TV.settings.font === '115' || TV.settings.font === '130') c += ' font' + TV.settings.font;
+  if (TV.settings.kids) c += ' kids';
   if (TV.device.tv) c += ' tvmode';
   if (TV.device.touch) c += ' touch';
   document.documentElement.className = c;

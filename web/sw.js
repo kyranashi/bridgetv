@@ -7,7 +7,7 @@
  *   • чужие адреса (видео, API, картинки) не кэшируются и не трогаются.
  * Старые браузеры (iOS 9–11) service worker не знают — для них всё работает как обычный сайт.
  */
-var CACHE = 'bridgetv-0.3.0';
+var CACHE = 'bridgetv-1.0.0';
 var SHELL = ['index.html', 'install.html', 'yt.html', 'css/app.css', 'js/core.js', 'js/data.js', 'js/services.js', 'js/scan.js',
   'js/films.js', 'js/player.js', 'js/nav.js', 'js/app.js', 'vendor/hls.min.js', 'manifest.json',
   'img/icon-192.png', 'img/icon-512.png', 'img/icon-152.png', '../data/catalog.js'];
@@ -23,8 +23,8 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   var req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;     // чужое — без вмешательства
-  if (/\/data\/(catalog\.(js|json)|logos\/)/.test(url.pathname) && !/logos/.test(url.pathname)) {
-    e.respondWith(fetch(req).then(function (r) {           // каталог: сначала сеть
+  if (/\/data\/(catalog\.(js|json)|epg\.json)$/.test(url.pathname)) {
+    e.respondWith(fetch(req).then(function (r) {           // каталог и программа передач: сначала сеть
       var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); });
       return r;
     })['catch'](function () { return caches.match(req); }));
