@@ -1,0 +1,41 @@
+# Контрольные суммы релиза: SHA256SUMS.txt со всеми файлами релиза.
+# Запуск вручную после того, как все сборки прикрепили свои файлы (Actions → этот workflow → Run).
+# Проверка у пользователя: sha256sum -c SHA256SUMS.txt  (Windows: certutil -hashfile <файл> SHA256)
+name: Контрольные суммы релиза
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Тег релиза, напр. v0.3.0"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  sums:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Скачать файлы релиза и посчитать SHA-256
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          case "$TAG" in v[0-9]*) ;; *) echo "bad tag"; exit 1;; esac
+          mkdir rel && cd rel
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" --skip-existing
+          rm -f SHA256SUMS.txt
+          sha256sum -- * | tee ../SHA256SUMS.txt
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-checksums: SHA256SUMS.txt
+      - name: Прикрепить к релизу
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" SHA256SUMS.txt --clobber -R "$GITHUB_REPOSITORY"

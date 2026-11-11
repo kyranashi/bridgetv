@@ -1,0 +1,34 @@
+# Сборка
+ios/build/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+dist/
+_site/
+*.ipa
+*.apk
+
+# Готовые файлы и КЛЮЧ ПОДПИСИ Android (releases/android-signing) — не публикуются
+releases/
+
+# Python
+__pycache__/
+*.pyc
+
+# Системное
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Локальные настройки Claude Code
+.claude/
+
+# Личный файл итогов и планов — только на ПК
+ИТОГИ_И_ПЛАН.md
+desktop/node_modules/
+desktop/package-lock.json
+
+# Только на ПК разработчика (не публикуются)
+ios/legacy/
+docs/archive/

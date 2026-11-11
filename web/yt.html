@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>BridgeTV — плеер YouTube</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<!-- Только официальный плеер YouTube; ничего другого эта страница не загружает -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com; img-src https: data:; style-src 'unsafe-inline'; connect-src https:">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{position:absolute;inset:0;width:100%;height:100%}iframe{border:0}</style>
+</head>
+<body>
+<!--
+  BridgeTV — страница официального встроенного плеера YouTube (IFrame Player API).
+  Приложения (iOS, Android, Windows) показывают интерфейс из файлов (file://), а YouTube
+  требует, чтобы плеер стоял на настоящем сайте. Поэтому плеер открывается с этой страницы
+  на GitHub Pages и сообщает приложению о событиях через postMessage:
+    {bt:'yt', ev:'ready'|'playing'|'paused'|'ended'|'error', code}
+  Качество, озвучка и субтитры — в меню самого плеера YouTube.
+-->
+<div id="p"></div>
+<script>
+(function () {
+  var q = {}, s = location.search.replace(/^\?/, '').split('&');
+  for (var i = 0; i < s.length; i++) { var kv = s[i].split('='); q[kv[0]] = decodeURIComponent(kv[1] || ''); }
+  var id = /^[\w-]{11}$/.test(q.v || '') ? q.v : '';          // принимаем только id видео
+  function send(ev, code) { try { parent.postMessage({ bt: 'yt', ev: ev, code: code || 0, v: id }, '*'); } catch (e) {} }
+  if (!id) { send('error', 2); return; }
+  window.onYouTubeIframeAPIReady = function () {
+    new YT.Player('p', {
+      videoId: id, width: '100%', height: '100%', host: 'https://www.youtube-nocookie.com',
+      playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, hl: q.hl || 'ru', cc_lang_pref: 'ru', fs: 1, origin: location.origin },
+      events: {
+        onReady: function (e) { send('ready'); try { e.target.playVideo(); } catch (x) {} },
+        onStateChange: function (e) { var m = { 0: 'ended', 1: 'playing', 2: 'paused' }; if (m[e.data]) send(m[e.data]); },
+        onError: function (e) { send('error', e.data); }   // 101/150 — владелец запретил встраивание
+      }
+    });
+  };
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  tag.onerror = function () { send('error', 1); };
+  document.head.appendChild(tag);
+})();
+</script>
+</body>
+</html>

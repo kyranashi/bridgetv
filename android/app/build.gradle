@@ -1,0 +1,64 @@
+// BridgeTV для Android.
+// Интерфейс — тот же web/ (копируется в assets при сборке), нативная часть — MainActivity + Bridge.
+// minSdk 19 = Android 4.4 KitKat (старые телефоны, планшеты, ТВ-приставки); работает и на Android 15.
+plugins {
+    id 'com.android.application'
+}
+
+def wwwDir = layout.buildDirectory.dir("generated/www").get().asFile
+
+// Веб-интерфейс и каталог каналов -> assets/www (тот же макет, что в iOS: www/web, www/data)
+tasks.register('copyWww', Copy) {
+    from('../../web') { into 'www/web' }
+    from('../../data') {
+        into 'www/data'
+        include 'catalog.js', 'logos/**'
+    }
+    into wwwDir
+}
+preBuild.dependsOn 'copyWww'
+
+android {
+    namespace 'com.kyranashi.bridgetv'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.kyranashi.bridgetv"
+        minSdk 19
+        targetSdk 34
+        versionCode 252
+        versionName "0.3.0"
+    }
+
+    // Подпись: ключ из секретов GitHub (BTV_KEYSTORE и др., см. docs/ANDROID.md).
+    // Без ключа (локальная сборка) — отладочная подпись Android SDK.
+    signingConfigs {
+        release {
+            def ks = System.getenv("BTV_KEYSTORE")
+            if (ks) {
+                storeFile file(ks)
+                storeType "pkcs12"
+                storePassword System.getenv("BTV_KS_PASS")
+                keyAlias System.getenv("BTV_KEY_ALIAS") ?: "bridgetv"
+                keyPassword System.getenv("BTV_KS_PASS")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv("BTV_KEYSTORE") ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    sourceSets {
+        main { assets.srcDirs += wwwDir }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}

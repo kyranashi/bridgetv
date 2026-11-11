@@ -1,0 +1,15 @@
+# Автообновление зависимостей (раз в неделю — запросы на слияние с обновлениями безопасности)
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /desktop
+    schedule:
+      interval: weekly
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly

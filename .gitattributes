@@ -1,0 +1,6 @@
+# Всегда LF: скрипты .sh и сборка на Linux (GitHub Actions) ломаются от CRLF
+* text=auto eol=lf
+*.png binary
+*.der binary
+*.ipa binary
+*.mobileconfig -text

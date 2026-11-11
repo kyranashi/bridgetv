@@ -1,0 +1,356 @@
+/*
+ * BridgeTV — стили. Тёмная «телевизорная» тема.
+ * Совместимость: Safari iOS 9 (без CSS grid, без gap у flex, без CSS-переменных),
+ * Android 4.4+, браузеры Smart TV. Ширины карточек — через проценты и media-запросы.
+ * .lite — лёгкий режим для старой техники (без теней, размытия и анимаций).
+ * .tvmode — телевизор: крупнее шрифт и заметнее фокус.
+ */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; background: #0b0e14; }
+body {
+  margin: 0; background: #0b0e14; color: #e8ecf3;
+  font: 16px/1.35 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+}
+button, input, select { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+a { color: #6aa5ff; }
+img { border: 0; }
+code { background: #1d2430; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+
+/* -------------------------------------------------- шапка и меню */
+#head {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20; height: 54px;
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+  padding: 0 12px; padding-top: env(safe-area-inset-top);
+  background: rgba(11, 14, 20, 0.92); border-bottom: 1px solid #1a202b;
+}
+#head h1 { -webkit-flex: 1; flex: 1; margin: 0 6px; font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbtn { min-width: 44px; height: 44px; font-size: 22px; border-radius: 12px; text-align: center; }
+.hbtn.back { font-size: 34px; line-height: 40px; color: #6aa5ff; }
+
+#tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: -webkit-flex; display: flex; background: #10141c; border-top: 1px solid #1a202b;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+#tabbar button {
+  -webkit-flex: 1; flex: 1; height: 60px; text-align: center; font-size: 11px; color: #8a94a6;
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+  -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+}
+#tabbar button span { font-size: 22px; line-height: 26px; }
+#tabbar button.on { color: #fff; }
+#tabbar button.on span { -webkit-filter: none; filter: none; }
+
+#main { padding: 64px 12px 84px; min-height: 100vh; }
+
+/* Широкий экран (iPad в альбоме, ПК, ТВ): меню слева */
+@media (min-width: 900px) {
+  #tabbar { top: 0; right: auto; width: 92px; -webkit-flex-direction: column; flex-direction: column; border-top: 0; border-right: 1px solid #1a202b; padding-top: 10px; }
+  #tabbar button { -webkit-flex: none; flex: none; height: 76px; font-size: 12px; }
+  #tabbar button span { font-size: 26px; line-height: 32px; }
+  #head { left: 92px; }
+  #main { margin-left: 92px; padding: 66px 20px 30px; }
+}
+
+/* -------------------------------------------------- общие элементы */
+.sh-h { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin: 18px 2px 8px; }
+.sh-h h3 { -webkit-flex: 1; flex: 1; margin: 0; font-size: 18px; }
+.link { color: #6aa5ff; font-size: 15px; padding: 6px 4px; }
+.note { color: #8a94a6; font-size: 14px; margin: 10px 2px; }
+.note.center { text-align: center; margin-top: 24px; }
+.empty { text-align: center; color: #8a94a6; padding: 50px 20px; font-size: 16px; }
+.empty .ei { font-size: 44px; margin-bottom: 10px; }
+.btn {
+  display: inline-block; padding: 11px 18px; border-radius: 12px; background: #1d2430; color: #e8ecf3;
+  text-decoration: none; text-align: center; font-weight: 600; margin: 4px 0;
+}
+.btn.primary { background: #3d7bff; color: #fff; }
+.more-btn { display: block; width: 100%; padding: 14px; margin: 10px 0; text-align: center; border-radius: 12px; background: #151a23; color: #6aa5ff; font-weight: 600; }
+
+.chips { white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 4px -12px 6px; padding: 4px 12px; }
+.chips.wrap { white-space: normal; overflow: visible; margin: 0; padding: 0; }
+.chips::-webkit-scrollbar, .sh-row::-webkit-scrollbar { display: none; }
+.chip {
+  display: inline-block; padding: 9px 15px; margin: 0 6px 6px 0; border-radius: 22px; background: #1a202b;
+  color: #c9d1de; font-size: 15px; white-space: nowrap; text-align: center;
+}
+.chip i { font-style: normal; color: #7f8aa0; font-size: 13px; margin-left: 3px; }
+.chip.on { background: #e8ecf3; color: #0b0e14; }
+.chip.on i { color: #4a5263; }
+.chip.ghost { background: transparent; border: 1px solid #2a3240; }
+.pills .chip { font-size: 16px; font-weight: 600; padding: 10px 16px; }
+
+.toolbar { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin: 4px 2px 10px; }
+.toolbar > * { margin-right: 12px; }
+.toggle { padding: 8px 12px 8px 8px; border-radius: 20px; background: #151a23; font-size: 14px; color: #c9d1de; }
+.toggle i { display: inline-block; width: 18px; height: 18px; border-radius: 6px; border: 2px solid #4a5263; vertical-align: -4px; margin-right: 7px; }
+.toggle.on i { background: #3d7bff; border-color: #3d7bff; box-shadow: inset 0 0 0 3px #151a23; }
+
+.spin { display: inline-block; width: 38px; height: 38px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.18); border-top-color: #fff; -webkit-animation: sp 0.8s linear infinite; animation: sp 0.8s linear infinite; }
+.spin.small { width: 18px; height: 18px; border-width: 3px; vertical-align: -4px; margin-right: 6px; }
+@-webkit-keyframes sp { to { -webkit-transform: rotate(360deg); } }
+@keyframes sp { to { transform: rotate(360deg); } }
+.loading-big { text-align: center; padding: 60px 0; }
+
+/* -------------------------------------------------- сетки и карточки */
+.grid { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin: 0 -5px; }
+.grid .card { margin: 5px; }
+.chs .card { width: calc(50% - 10px); }
+.vs .card { width: calc(50% - 10px); }
+.vcs .card { width: calc(50% - 10px); }
+@media (min-width: 600px) { .chs .card, .vs .card { width: calc(33.333% - 10px); } .vcs .card { width: calc(25% - 10px); } }
+@media (min-width: 900px) { .chs .card { width: calc(25% - 10px); } .vs .card { width: calc(25% - 10px); } .vcs .card { width: calc(16.66% - 10px); } }
+@media (min-width: 1300px) { .chs .card { width: calc(20% - 10px); } .vs .card { width: calc(20% - 10px); } }
+
+.card { position: relative; display: block; border-radius: 14px; background: #151a23; overflow: hidden; }
+.card:active { background: #1d2430; }
+
+/* Канал: номер · логотип · название · статус */
+.card.ch { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; padding: 10px; min-height: 68px; }
+.card.ch .num { width: 30px; text-align: center; color: #7f8aa0; font-size: 14px; font-weight: 700; -webkit-flex: none; flex: none; }
+/* Светлая плитка под логотипом: большинство логотипов рассчитаны на светлый фон */
+.card.ch .logo {
+  position: relative; width: 48px; height: 48px; border-radius: 10px; background: #eef1f6; -webkit-flex: none; flex: none;
+  margin-right: 10px; overflow: hidden; text-align: center;
+}
+.card.ch .logo b { line-height: 48px; color: #5b6475; font-size: 16px; }
+.card.ch .logo img { position: absolute; left: 4px; top: 4px; width: 40px; height: 40px; object-fit: contain; background: #eef1f6; }
+
+/* Заголовки секций в списке каналов */
+.sec-h { display: -webkit-flex; display: flex; -webkit-align-items: baseline; align-items: baseline; margin: 18px 2px 6px; }
+.sec-h h3 { margin: 0; font-size: 18px; }
+.sec-h i { font-style: normal; color: #7f8aa0; font-size: 14px; margin-left: 8px; }
+.card.ch .nm { -webkit-flex: 1; flex: 1; font-size: 15px; font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word; }
+.card.ch .meta { -webkit-flex: none; flex: none; width: 18px; text-align: center; margin-left: 4px; }
+.dot { display: block; width: 9px; height: 9px; border-radius: 50%; margin: 0 auto; background: #4a5263; }
+.st-ok .dot { background: #2ecc71; }
+.st-slow .dot { background: #f5a623; }
+.st-dead .dot { background: #ff4757; }
+.st-dead .nm, .st-dead .logo { opacity: 0.55; }
+.star { display: block; font-style: normal; color: #ffc341; font-size: 13px; margin-top: 4px; }
+
+/* Видео / фильм */
+.card.v .th { position: relative; display: block; padding-top: 56.25%; background: #1d2430; }
+.card.v .th img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+.card.v .th em {
+  position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,0.8); color: #fff; font-style: normal;
+  font-size: 12px; font-weight: 700; padding: 2px 6px; border-radius: 5px;
+}
+.card.v .th em.live { background: #e3263a; }
+.card.v .th .prog { position: absolute; left: 0; bottom: 0; height: 4px; background: #e3263a; }
+.card.v .t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding: 8px 10px 2px; font-size: 14px; font-weight: 600; }
+.card.v .s { display: block; padding: 0 10px 10px; font-size: 12px; color: #8a94a6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Канал YouTube */
+.card.vc { text-align: center; padding: 14px 8px; }
+.card.vc .ava { display: block; width: 72px; height: 72px; line-height: 72px; margin: 0 auto 8px; border-radius: 50%; background: #232b38; overflow: hidden; font-weight: 700; color: #8a94a6; }
+.card.vc .ava img { width: 100%; height: 100%; }
+.card.vc .t { display: block; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card.vc .s { display: block; font-size: 12px; color: #8a94a6; }
+
+/* Горизонтальные полки */
+.sh-row { white-space: nowrap; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; margin: 0 -12px; padding: 2px 12px 6px; }
+.sh-row .card { display: inline-block; vertical-align: top; white-space: normal; margin-right: 10px; }
+.sh-row .card.v { width: 230px; }
+.sh-row .card.ch { display: inline-block; width: 210px; }
+.sh-row .card.ch > span { display: inline-block; vertical-align: middle; }
+.sh-row .card.ch .nm { width: 108px; }
+.sh-row .card.vc { width: 130px; }
+.sh-row.loading { color: #8a94a6; padding: 20px 14px; }
+
+/* Строки-меню */
+.rows { border-radius: 14px; background: #151a23; overflow: hidden; margin: 6px 0 14px; }
+.row {
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; width: 100%;
+  padding: 13px 14px; border-bottom: 1px solid #1d2430; min-height: 56px;
+}
+.row:last-child { border-bottom: 0; }
+.row.col { -webkit-flex-direction: column; flex-direction: column; -webkit-align-items: stretch; align-items: stretch; }
+.row.col input { margin-top: 8px; }
+.row.dim { opacity: 0.6; }
+.row.static { cursor: default; }
+.ri { width: 34px; font-size: 22px; text-align: center; margin-right: 10px; -webkit-flex: none; flex: none; }
+.rt { -webkit-flex: 1; flex: 1; min-width: 0; }
+.rt b { display: block; font-weight: 600; }
+.rt small { display: block; color: #8a94a6; font-size: 13px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+.rr { color: #6b7385; font-size: 20px; margin-left: 8px; }
+.lrow { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; border-bottom: 1px solid #1d2430; }
+.lrow .row { border-bottom: 0; -webkit-flex: 1; flex: 1; }
+.icon-btn { width: 46px; height: 46px; text-align: center; color: #8a94a6; font-size: 18px; -webkit-flex: none; flex: none; }
+select, input[type=url], input[type=search], input:not([type]) {
+  background: #0f131a; border: 1px solid #2a3240; border-radius: 10px; padding: 10px 12px; color: #e8ecf3; font-size: 16px;
+  -webkit-appearance: none; max-width: 100%;
+}
+select { padding-right: 28px; }
+.switch { position: relative; width: 50px; height: 30px; border-radius: 15px; background: #2a3240; -webkit-flex: none; flex: none; margin-left: 10px; }
+.switch i { position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; -webkit-transition: left 0.2s; transition: left 0.2s; }
+.switch.on { background: #2ecc71; }
+.switch.on i { left: 23px; }
+
+.box { background: #151a23; border-radius: 14px; padding: 12px 14px; margin: 14px 0; }
+.box h3 { margin: 2px 0 8px; font-size: 17px; }
+.box .rows, .box .lrow { background: transparent; }
+.form { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin: 6px -4px; }
+.form input { -webkit-flex: 1 1 200px; flex: 1 1 200px; margin: 4px; }
+.form .btn { margin: 4px; }
+
+/* Поиск */
+.sbar { display: -webkit-flex; display: flex; margin: 4px 0 6px; }
+.sbar input { -webkit-flex: 1; flex: 1; font-size: 18px; padding: 12px 14px; border-radius: 14px; }
+.sbtn { margin-left: 8px; padding: 0 16px; border-radius: 14px; background: #3d7bff; color: #fff; font-weight: 600; }
+.sugg { margin-bottom: 6px; }
+.sg { display: block; width: 100%; padding: 11px 6px; border-bottom: 1px solid #1a202b; font-size: 16px; }
+.sg small { float: right; color: #8a94a6; }
+
+.ch-head { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin: 6px 0 12px; }
+.ch-head img { width: 56px; height: 56px; border-radius: 50%; margin-right: 12px; }
+.ch-head b { -webkit-flex: 1; flex: 1; font-size: 18px; }
+.help h3 { margin: 22px 0 6px; }
+.help li { margin: 6px 0; color: #c9d1de; }
+.help p { color: #c9d1de; }
+
+#toast {
+  position: fixed; left: 50%; bottom: 90px; z-index: 300; max-width: 90%; -webkit-transform: translate(-50%, 20px); transform: translate(-50%, 20px);
+  background: #e8ecf3; color: #0b0e14; padding: 11px 18px; border-radius: 22px; font-weight: 600; font-size: 15px;
+  opacity: 0; pointer-events: none; -webkit-transition: opacity 0.2s, -webkit-transform 0.2s; transition: opacity 0.2s, transform 0.2s;
+}
+#toast.show { opacity: 1; -webkit-transform: translate(-50%, 0); transform: translate(-50%, 0); }
+
+/* -------------------------------------------------- плеер */
+#player { display: none; position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 100; background: #000; overflow: hidden; }
+#player.open { display: block; }
+html.playing, html.playing body { overflow: hidden; }
+/* пока смотрим — страница скрыта: поворот экрана пересчитывает только плеер (0.2.5) */
+html.playing #app { display: none; }
+#player { -webkit-transform: translateZ(0); transform: translateZ(0); -webkit-backface-visibility: hidden; }
+#pv { object-fit: contain; }
+#pv { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #000; }
+.p-ui { opacity: 0; visibility: hidden; -webkit-transition: opacity 0.25s; transition: opacity 0.25s; }
+#player.ui .p-ui { opacity: 1; visibility: visible; }
+.p-top, .p-bottom { position: absolute; left: 0; right: 0; padding: 12px 14px; display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+.p-top { top: 0; background: -webkit-linear-gradient(top, rgba(0,0,0,0.85), rgba(0,0,0,0)); background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0)); padding-bottom: 30px; }
+.p-bottom { bottom: 0; -webkit-flex-direction: column; flex-direction: column; background: -webkit-linear-gradient(bottom, rgba(0,0,0,0.85), rgba(0,0,0,0)); background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.85)); padding-top: 40px; }
+.p-title { -webkit-flex: 1; flex: 1; margin: 0 10px; min-width: 0; }
+.p-title b { display: block; font-size: 21px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-title span { display: block; font-size: 14px; color: #b9c2d0; }
+.pbtn { min-width: 50px; height: 50px; border-radius: 14px; background: rgba(255,255,255,0.14); color: #fff; font-size: 22px; text-align: center; margin: 0 4px; padding: 0 10px; }
+.pbtn.big { min-width: 74px; height: 62px; font-size: 26px; margin: 0 7px; }
+.pbtn.wide { margin: 6px; font-size: 17px; padding: 0 18px; }
+.p-row { display: -webkit-flex; display: flex; -webkit-justify-content: center; justify-content: center; -webkit-align-items: center; align-items: center; }
+.p-seek { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; width: 100%; max-width: 900px; margin-bottom: 10px; font-size: 13px; color: #c9d1de; }
+.p-seek input { -webkit-flex: 1; flex: 1; margin: 0 10px; }
+#player.live .p-seek, #player.live [data-p=back10], #player.live [data-p=fwd10], #player.live [data-p=play] { display: none; }
+#player:not(.multi) [data-p=prev], #player:not(.multi) [data-p=next], #player:not(.multi) [data-p=list] { display: none; }
+.p-status { position: absolute; left: 0; right: 0; top: 50%; -webkit-transform: translateY(-50%); transform: translateY(-50%); text-align: center; padding: 0 24px; display: none; z-index: 2; }
+.p-status.busy, .p-status.show { display: block; }
+.p-status .spin { display: none; margin-bottom: 14px; }
+.p-status.busy .spin { display: inline-block; }
+.p-msg { font-size: 17px; white-space: pre-line; text-shadow: 0 1px 3px #000; }
+.p-actions { margin-top: 14px; }
+.p-num { position: absolute; right: 30px; top: 80px; font-size: 54px; font-weight: 800; color: #fff; text-shadow: 0 2px 8px #000; display: none; z-index: 3; }
+.p-num.show { display: block; }
+.p-side {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 300px; max-width: 80%; background: rgba(12,15,21,0.95);
+  -webkit-transform: translateX(100%); transform: translateX(100%); -webkit-transition: -webkit-transform 0.25s; transition: transform 0.25s; z-index: 4;
+}
+.p-side.open { -webkit-transform: none; transform: none; }
+.p-side-h { padding: 18px 16px 10px; font-weight: 700; font-size: 18px; }
+.p-side-list { position: absolute; top: 52px; bottom: 0; left: 0; right: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.p-side-i { display: block; width: 100%; padding: 12px 16px; border-bottom: 1px solid #1a202b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-side-i i { display: inline-block; width: 36px; color: #7f8aa0; font-style: normal; }
+.p-side-i.cur { background: #3d7bff; }
+.p-side-i.cur i { color: #dbe6ff; }
+
+/* -------------------------------------------------- фокус для пульта/клавиатуры */
+button:focus, a:focus, select:focus, input:focus { outline: none; }
+/* Рамка фокуса — только при управлении с пульта/клавиатуры (html.kbd, ставит nav.js).
+   При касании пальцем или мышью рамки нет (0.3.0: «синий квадратик» при нажатии на вкладку). */
+html.kbd .card:focus, html.kbd .chip:focus, html.kbd .row:focus, html.kbd .btn:focus, html.kbd .pbtn:focus, html.kbd .p-side-i:focus,
+html.kbd .more-btn:focus, html.kbd .toggle:focus, html.kbd .link:focus, html.kbd .icon-btn:focus, html.kbd .sg:focus,
+html.kbd #tabbar button:focus, html.kbd .hbtn:focus, html.kbd .sbtn:focus {
+  box-shadow: 0 0 0 3px #6aa5ff; position: relative; z-index: 1;
+}
+html.kbd:not(.lite) .card:focus { -webkit-transform: scale(1.04); transform: scale(1.04); }
+html:not(.lite) .card { -webkit-transition: -webkit-transform 0.12s; transition: transform 0.12s; }
+input:focus, select:focus { border-color: #6aa5ff; }
+
+/* -------------------------------------------------- лёгкий режим и телевизор */
+.lite * { -webkit-transition: none !important; transition: none !important; box-shadow: none; }
+html.kbd.lite .card:focus, html.kbd.lite .chip:focus, html.kbd.lite .row:focus, html.kbd.lite .btn:focus, html.kbd.lite .pbtn:focus { box-shadow: 0 0 0 3px #6aa5ff !important; }
+.lite #head { background: #0b0e14; }
+.tvmode body { font-size: 18px; }
+.tvmode #main { padding-left: 40px; padding-right: 40px; }
+html.kbd.tvmode .card:focus { box-shadow: 0 0 0 4px #fff; }
+
+/* Индикатор проверки каналов (scan.js) */
+.scan { font-size: 14px; color: #8a94a6; }
+
+
+/* Меню плеера «Качество / Озвучка / Субтитры» (с 0.2.4) */
+.p-opts { display: none; position: absolute; right: 0; top: 0; bottom: 0; width: 320px; max-width: 86%; z-index: 5;
+  background: rgba(12,15,21,0.97); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.p-opts.open { display: block; }
+.p-opts-in { padding: 10px 14px 30px; }
+.p-opts-h { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: space-between; justify-content: space-between; font-weight: 700; font-size: 18px; padding: 6px 0 4px; }
+.p-opts h4 { margin: 16px 0 6px; color: #8a94a6; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; }
+.p-opt { display: block; width: 100%; padding: 12px 12px; margin: 3px 0; border-radius: 10px; background: #1a202b; font-size: 16px; }
+.p-opt.on { background: #3d7bff; color: #fff; }
+html.kbd .p-opt:focus { box-shadow: 0 0 0 3px #6aa5ff; }
+
+/* Фильтры и поиск на вкладках «Видео» и «Фильмы» (с 0.2.4) */
+.filters { margin: 2px 0 8px; }
+.filters .chips { margin-bottom: 2px; }
+.badge-src { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: #232b38; color: #b9c2d0; margin-left: 4px; }
+.dl-prog { height: 4px; border-radius: 2px; background: #232b38; margin-top: 6px; overflow: hidden; }
+.dl-prog i { display: block; height: 100%; background: #3d7bff; }
+.tools { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin: 4px -4px 8px; }
+.tools .btn { margin: 4px; }
+
+/* Шапка бокового списка с кнопкой закрытия (0.2.5) */
+.p-side-h { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: space-between; justify-content: space-between; padding: 10px 10px 8px 16px; }
+.p-side-list { top: 66px; }
+
+/* Официальный плеер YouTube (0.3.0): под верхней панелью, панель всегда видна (иначе не выйти — касания уходят в плеер) */
+.p-embed { position: absolute; left: 0; right: 0; top: 74px; bottom: 0; width: 100%; height: calc(100% - 74px); border: 0; background: #000; z-index: 1; }
+#player.embed .p-bottom, #player.embed .p-num { display: none; }
+#player.embed .p-ui { opacity: 1; visibility: visible; }
+#player.embed .p-top { background: #000; padding-bottom: 12px; z-index: 3; }
+#player.embed .p-status { z-index: 2; }
+#player.embed .p-status { top: auto; bottom: 16px; -webkit-transform: none; transform: none; background: rgba(0,0,0,0.75); padding: 12px 16px; }
+
+/* ================================================================ Дизайн 0.3.0: мягче и плавнее
+   Свой стиль (без копирования чужих приложений): тёмная тема, градиент индиго→бирюза из иконки,
+   скругления 16px, лёгкие анимации. В лёгком режиме (.lite) анимации отключены. */
+body { background: #0a0d14; }
+#head { background: rgba(10, 13, 20, 0.86); }
+html:not(.lite) #head { -webkit-backdrop-filter: saturate(160%) blur(14px); backdrop-filter: saturate(160%) blur(14px); }
+.card, .rows, .box, .more-btn { border-radius: 16px; }
+.btn.primary, .sbtn, .chip.on, .p-opt.on, .p-side-i.cur { background: #4f46e5; background: -webkit-linear-gradient(135deg, #4f46e5, #14b8a6); background: linear-gradient(135deg, #4f46e5, #14b8a6); color: #fff; }
+.chip.on i { color: rgba(255,255,255,0.8); }
+.toggle.on i { background: #14b8a6; border-color: #14b8a6; }
+.switch.on { background: #14b8a6; }
+
+/* нажатие — лёгкое «вдавливание», без синих рамок */
+html:not(.lite) .card, html:not(.lite) .chip, html:not(.lite) .btn, html:not(.lite) .row, html:not(.lite) #tabbar button, html:not(.lite) .pbtn {
+  -webkit-transition: -webkit-transform .12s ease, background-color .2s ease, opacity .2s ease; transition: transform .12s ease, background-color .2s ease, opacity .2s ease;
+}
+html:not(.lite) .card:active, html:not(.lite) .chip:active, html:not(.lite) .btn:active, html:not(.lite) .pbtn:active { -webkit-transform: scale(0.97); transform: scale(0.97); }
+html:not(.lite) .row:active { background: #1d2430; }
+
+/* активная вкладка — подсветка и полоска-индикатор */
+#tabbar button { position: relative; }
+#tabbar button.on { color: #fff; }
+#tabbar button.on:after { content: ''; position: absolute; left: 30%; right: 30%; bottom: 6px; height: 3px; border-radius: 3px; background: #14b8a6; }
+@media (min-width: 900px) { #tabbar button.on:after { left: 6px; right: auto; top: 22%; bottom: 22%; width: 3px; height: auto; } }
+html:not(.lite) #tabbar button.on span { -webkit-transform: translateY(-1px); transform: translateY(-1px); }
+
+/* плавное появление экрана */
+@-webkit-keyframes btvIn { from { opacity: 0; -webkit-transform: translateY(6px); } to { opacity: 1; -webkit-transform: none; } }
+@keyframes btvIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+html:not(.lite) #main.anim { -webkit-animation: btvIn .22s ease-out; animation: btvIn .22s ease-out; }
+html:not(.lite) .p-opts.open, html:not(.lite) #toast.show { -webkit-animation: btvIn .18s ease-out; animation: btvIn .18s ease-out; }
+
+/* картинки появляются мягко */
+html:not(.lite) .card img { -webkit-transition: opacity .25s; transition: opacity .25s; }

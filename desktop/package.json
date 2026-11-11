@@ -1,0 +1,42 @@
+{
+  "name": "bridgetv-desktop",
+  "productName": "BridgeTV",
+  "version": "0.3.0",
+  "description": "BridgeTV — телеканалы, видео и фильмы на ПК (Windows, Linux)",
+  "author": "kyranashi",
+  "license": "MIT",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": ">=38.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.kyranashi.bridgetv",
+    "productName": "BridgeTV",
+    "artifactName": "BridgeTV-${os}-${arch}.${ext}",
+    "directories": { "output": "../dist", "buildResources": "build" },
+    "files": ["main.js", "preload.js", "package.json"],
+    "extraResources": [
+      { "from": "../web", "to": "www/web", "filter": ["**/*", "!sw.js"] },
+      { "from": "../data", "to": "www/data", "filter": ["catalog.js", "logos/**"] }
+    ],
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
+    "win": { "target": ["nsis", "portable"], "icon": "build/icon.ico" },
+    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "artifactName": "BridgeTV-windows-setup.${ext}" },
+    "portable": { "artifactName": "BridgeTV-windows-portable.${ext}" },
+    "linux": { "target": ["AppImage"], "artifactName": "BridgeTV-linux.${ext}", "icon": "build/icon.png", "category": "Video" }
+  }
+}

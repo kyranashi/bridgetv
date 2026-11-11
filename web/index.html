@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<!-- Защита (0.3.0): скрипты — только свои файлы приложения, без eval; плагины, <base> и формы на чужие адреса запрещены.
+     Видео, каналы, картинки и API — с любых адресов (их список заранее неизвестен). -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' file: bridgetv: 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'self' file: bridgetv: https://kyranashi.github.io https://www.youtube-nocookie.com https://www.youtube.com">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>BridgeTV</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="BridgeTV — телевизор, YouTube и фильмы для любой техники, включая старые iPad и Smart TV">
+<!-- Как приложение на экране «Домой» (iOS 6+) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BridgeTV">
+<meta name="theme-color" content="#0a0d14">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="img/icon-152.png">
+<link rel="icon" href="img/favicon-32.png" sizes="32x32">
+<link rel="icon" href="img/icon-192.png" sizes="192x192">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+  <header id="head"></header>
+  <main id="main"><div class="loading-big"><span class="spin"></span></div></main>
+  <nav id="tabbar"></nav>
+</div>
+<div id="toast"></div>
+
+<!-- Каталог каналов (генерируется tools/build_catalog.py). Подключён как скрипт,
+     чтобы работать даже при открытии файла напрямую и в старых браузерах. -->
+<script src="../data/catalog.js"></script>
+<script src="js/core.js"></script>
+<script src="js/data.js"></script>
+<script src="js/services.js"></script>
+<script src="js/scan.js"></script>
+<script src="js/films.js"></script>
+<script src="js/player.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/app.js"></script>
+<script>
+  (function () {
+    function go() { try { TV.app.start(); } catch (e) {
+      document.getElementById('main').innerHTML = '<p style="padding:30px">Ошибка запуска: ' + (e && e.message) + '</p>';
+    } }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, false); else go();
+    // PWA: установка и запуск без интернета (только сайт по https; в приложениях и старых браузерах не нужно)
+    if (!window.TV_NATIVE && location.protocol === 'https:' && 'serviceWorker' in navigator) {
+      window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js')['catch'](function () {}); });
+    }
+  })();
+</script>
+</body>
+</html>

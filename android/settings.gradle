@@ -1,0 +1,17 @@
+// BridgeTV для Android — оболочка WebView для общего интерфейса web/ (см. docs/ANDROID.md)
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "BridgeTV"
+include ':app'
