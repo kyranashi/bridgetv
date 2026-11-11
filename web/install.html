@@ -96,7 +96,12 @@
   for (i = 0; i < cards.length; i++) if (cards[i].getAttribute('data-os') === os) { cards[i].className += ' me'; first = cards[i]; }
   if (first) first.parentNode.insertBefore(first, document.getElementById('pwa').nextSibling);
   var links = document.querySelectorAll('[data-dl]');
-  for (i = 0; i < links.length; i++) links[i].href = REPO + '/latest/download/' + links[i].getAttribute('data-dl');
+  for (i = 0; i < links.length; i++) {
+    var dl = links[i].getAttribute('data-dl');
+    if (dl && /^[A-Za-z0-9._-]+$/.test(dl)) {
+      links[i].href = REPO + '/latest/download/' + encodeURIComponent(dl);
+    }
+  }
   document.getElementById('rel').href = REPO + '/latest';
   // Установка PWA (Chrome, Edge, Android, Samsung Internet)
   var ev = null;
