@@ -64,6 +64,11 @@ TV.closest = function (el, attr) {
 };
 
 TV.each = function (arr, fn) { for (var i = 0; i < arr.length; i++) fn(arr[i], i); };
+/* 1 фильм, 2 фильма, 5 фильмов */
+TV.plural = function (n, one, few, many) {
+  var a = Math.abs(n) % 100, b = a % 10;
+  return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many;
+};
 TV.isArray = function (a) { return Object.prototype.toString.call(a) === '[object Array]'; };
 TV.filter = function (arr, fn) { var r = []; for (var i = 0; i < arr.length; i++) if (fn(arr[i], i)) r.push(arr[i]); return r; };
 TV.find = function (arr, fn) { for (var i = 0; i < arr.length; i++) if (fn(arr[i], i)) return arr[i]; return null; };

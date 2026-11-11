@@ -125,7 +125,8 @@
   function shelf(title, items, l, moreAct, moreArg) {
     reg(l, items);
     var h = '<section class="shelf"><div class="sh-h"><h3>' + esc(title) + '</h3>' +
-      (moreAct ? '<button class="link" data-a="' + moreAct + '" data-x="' + esc(moreArg || '') + '">Все ›</button>' : '') + '</div>' +
+      '<span class="sh-nav"><button class="rarr" data-a="rowl" aria-label="Назад">‹</button><button class="rarr" data-a="rowr" aria-label="Дальше">›</button>' +
+      (moreAct ? '<button class="link" data-a="' + moreAct + '" data-x="' + esc(moreArg || '') + '">Все ›</button>' : '') + '</span></div>' +
       '<div class="sh-row" data-shelf="1">';
     for (var i = 0; i < items.length && i < 20; i++) h += card(items[i], l, i);
     return h + '</div></section>';
@@ -479,7 +480,13 @@
   S.movies = function () {
     var h = '<form class="sbar" data-form="fmsearch" action="#"><input type="search" name="q" autocomplete="off" autocorrect="off" ' +
       'placeholder="Найти фильм: название или режиссёр" value="' + esc(fm.q) + '"><button class="sbtn" type="submit">Найти</button></form>';
-    h += '<div class="filters">' + chips(TV.movies.genres, fm.genre, 'fmgenre') + chips(TV.movies.yearsList, fm.years, 'fmyears') + '</div>';
+    // Фильтры: кнопки «Жанр ▾» и «Год ▾» открывают окно выбора (S.mvfilter); ниже — прокручиваемый ряд жанров
+    var gName = fm.genre !== 'all' ? TV.movies.genreName(fm.genre) : 'Все', yObj = TV.find(TV.movies.yearsList, function (y) { return y.id === fm.years; });
+    h += '<div class="fbar"><button class="btn fbtn' + (fm.genre !== 'all' ? ' on' : '') + '" data-a="go" data-x="movies/mvfilter">🎭 Жанр: ' + esc(gName) + ' ▾</button>' +
+      '<button class="btn fbtn' + (fm.years !== 'all' ? ' on' : '') + '" data-a="go" data-x="movies/mvfilter">📅 Год: ' + esc(fm.years !== 'all' && yObj ? yObj.name : 'Любой') + ' ▾</button>' +
+      (fmActive() ? '<button class="btn" data-a="fmreset">✕ Сбросить</button>' : '') + '</div>';
+    h += '<div class="filters arrows"><button class="rarr" data-a="rowl" aria-label="Назад">‹</button>' + chips(TV.movies.genres, fm.genre, 'fmgenre') +
+      '<button class="rarr" data-a="rowr" aria-label="Дальше">›</button></div>';
     var dls = TV.dl.all();
     var after = loadArchShelves;
     if (!TV.movies.ready()) {
@@ -549,6 +556,55 @@
     return m === 'mirror' || (m === 'official' && (TV.native || TV.yt.hasKey()));
   }
   function placeholderBig() { return '<div class="loading-big"><span class="spin"></span></div>'; }
+
+  /* Горизонтальные ряды (жанры, полки) на ПК (1.1.0): колесо мыши листает ряд вбок,
+     ряд можно тянуть мышью, а по краям — кнопки ‹ › . На сенсорных экранах — обычный свайп. */
+  function scrollRows() {
+    var rowOf = function (t) { var r = TV.closest(t, 'data-shelf'); return r && r.scrollWidth > r.clientWidth + 4 ? r : null; };
+    document.addEventListener('wheel', function (e) {
+      var r = rowOf(e.target);
+      if (!r || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      var before = r.scrollLeft;
+      r.scrollLeft += e.deltaY;
+      if (r.scrollLeft !== before) e.preventDefault();   // в конце ряда — обычная прокрутка страницы
+    }, { passive: false });
+    var drag = null, moved = false;
+    document.addEventListener('mousedown', function (e) {
+      var r = e.button === 0 && rowOf(e.target);
+      if (r) { drag = { r: r, x: e.clientX, s: r.scrollLeft }; moved = false; }
+    }, false);
+    document.addEventListener('mousemove', function (e) {
+      if (!drag) return;
+      var dx = e.clientX - drag.x;
+      if (Math.abs(dx) > 6) moved = true;
+      if (moved) drag.r.scrollLeft = drag.s - dx;
+    }, false);
+    document.addEventListener('mouseup', function () { drag = null; }, false);
+    // после перетаскивания не «нажимать» карточку под мышью
+    document.addEventListener('click', function (e) { if (moved) { moved = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  }
+  A.rowStep = function (btn, dir) {
+    var p = btn.parentNode, r = null;
+    for (var k = 0; k < 3 && p && !r; k++) { r = p.querySelector('[data-shelf]'); p = p.parentNode; }
+    if (r) r.scrollLeft += dir * Math.max(200, r.clientWidth * 0.8);
+  };
+
+  /* Окно выбора жанра и года (1.1.0): все варианты сразу, со счётчиками */
+  S.mvfilter = function () {
+    if (!TV.movies.ready()) return { title: '🎭 Жанр и год', html: placeholderBig(), after: function () { TV.movies.load(function () { if (top().s === 'mvfilter') render(true); }); } };
+    var gs = [], ys = [];
+    TV.each(TV.movies.genres, function (g) {
+      var n = TV.movies.find({ q: fm.q, genre: g.id, years: fm.years }).length;
+      if (n || g.id === 'all' || g.id === fm.genre) gs.push({ id: g.id, name: g.name, count: n });
+    });
+    TV.each(TV.movies.yearsList, function (y) { ys.push({ id: y.id, name: y.name, count: TV.movies.find({ q: fm.q, genre: fm.genre, years: y.id }).length }); });
+    var total = TV.movies.find(fm).length;
+    var h = '<div class="sh-h"><h3>🎭 Жанр</h3></div>' + chips(gs, fm.genre, 'fmpickg').replace('class="chips"', 'class="chips wrap big"') +
+      '<div class="sh-h"><h3>📅 Год выхода</h3></div>' + chips(ys, fm.years, 'fmpicky').replace('class="chips"', 'class="chips wrap big"') +
+      '<div class="tools fpick"><button class="btn primary" data-a="back">Показать ' + total + ' ' + TV.plural(total, 'фильм', 'фильма', 'фильмов') + '</button>' +
+      (fmActive() ? '<button class="btn" data-a="fmreset">Сбросить</button>' : '') + '</div>';
+    return { title: '🎭 Жанр и год', html: h };
+  };
 
   /* Страница фильма: постер, описание, трейлер, где смотреть, похожие */
   S.film = function (p) {
@@ -983,6 +1039,11 @@
       case 'yvmore': yv.page++; runYv(true); TV.toast('Загружаю ещё…'); break;
       case 'fmgenre': fm.genre = x; render(); break;
       case 'fmyears': fm.years = x; render(); break;
+      case 'rowl': A.rowStep(el, -1); break;
+      case 'rowr': A.rowStep(el, 1); break;
+      case 'fmpickg': fm.genre = x; render(true); break;     // окно выбора: остаёмся в нём, счётчики пересчитываются
+      case 'fmpicky': fm.years = x; render(true); break;
+      case 'fmreset': fm.genre = 'all'; fm.years = 'all'; fm.q = ''; render(true); break;
       case 'fmsel': { var kv = String(x).split(':'); if (kv[0] === 'genre') fm.genre = kv[1]; else fm.years = kv[1]; switchTab('movies', true); stacks.movies = [stacks.movies[0]]; render(); window.scrollTo(0, 0); break; }
       case 'film': push({ s: 'film', id: x }); break;
       case 'trailer': {
@@ -1193,6 +1254,7 @@
     }, false);
 
     TV.on('playerClosed', function () { render(true); });
+    scrollRows();
     // Программа передач пришла — обновить карточки каналов (без прокрутки)
     TV.on('epg', function () { if ((tab === 'tv' || top().s === 'region') && !(TV.player && TV.player.isOpen())) render(true); });
     // Голосовой поиск: распознанный текст — в поиск

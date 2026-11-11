@@ -388,3 +388,19 @@ textarea.code { width: 100%; min-height: 110px; background: #0f141f; color: #e8e
 .film-o { color: #8a94a6; margin-bottom: 6px; }
 .film-f { color: #c3cad6; font-size: 14px; margin: 2px 0; }
 .film-d { color: #d6dce6; line-height: 1.5; font-size: 15px; }
+
+/* ================= 1.1.0: выбор жанра, листание рядов ================= */
+.fbar { margin: 4px 0 6px; }
+.fbar .btn { margin: 0 8px 8px 0; }
+.fbtn.on { background: linear-gradient(135deg, #4f46e5, #14b8a6); color: #fff; }
+.chips.wrap.big .chip { margin: 0 8px 10px 0; padding: 10px 16px; font-size: 15px; }
+.fpick { margin-top: 18px; }
+.sh-nav { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+.rarr { display: none; width: 32px; height: 32px; border-radius: 50%; border: 0; background: #1d2430; color: #e8ecf3; font-size: 20px; line-height: 30px; margin-left: 6px; cursor: pointer; padding: 0; }
+.rarr:hover { background: #2a3346; }
+html:not(.touch) .sh-nav .rarr { display: inline-block; }
+.filters.arrows { position: relative; }
+html:not(.touch) .filters.arrows { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+html:not(.touch) .filters.arrows .rarr { display: inline-block; -webkit-flex: 0 0 32px; flex: 0 0 32px; margin: 0 4px; }
+html:not(.touch) .filters.arrows .chips { -webkit-flex: 1; flex: 1; min-width: 0; margin: 4px 0 6px; }
+[data-shelf] { cursor: grab; }
