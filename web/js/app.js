@@ -85,7 +85,14 @@
       '<span class="t">' + esc(it.n) + '</span>' +
       '<span class="s">' + esc([it.sub, it.views ? TV.fmtViews(it.views) : ''].join(it.sub && it.views ? ' · ' : '')) + '</span></button>';
   }
-  function card(it, l, i) { return it.v || it.k === 'ch' && TV.catalog.byId(it.id) ? chCard(it.v ? it : TV.catalog.byId(it.id), l, i) : vCard(it, l, i); }
+  /* Постер фильма (каталог, 1.1.0) — открывает страницу фильма */
+  function mvCard(it) {
+    return '<button class="card v mv" data-a="film" data-x="' + esc(it.id) + '">' +
+      '<span class="th"><img loading="lazy" src="' + esc(it.img) + '" alt="" onerror="this.style.display=\'none\'"></span>' +
+      '<span class="t">' + esc(it.n) + '</span><span class="s">' + esc(it.sub || '') + '</span></button>';
+  }
+  function card(it, l, i) {
+    if (it.k === 'mv') return mvCard(it); return it.v || it.k === 'ch' && TV.catalog.byId(it.id) ? chCard(it.v ? it : TV.catalog.byId(it.id), l, i) : vCard(it, l, i); }
 
   function grid(items, l, cls) {
     reg(l, items);
@@ -256,7 +263,7 @@
     if (t === 'all') {
       if (R.tv.length) h += shelf('📺 Телеканалы', R.tv, 's-tv', 'stab', 'tv');
       h += R.video ? (R.video.length ? shelf('▶️ Видео', TV.filter(R.video, function (x) { return x.k === 'yt'; }), 's-v', 'stab', 'video') : '') : placeholder('ph-video', '▶️ Видео');
-      h += R.film ? (R.film.length ? shelf('🎬 Фильмы (архив)', R.film, 's-f', 'stab', 'film') : '') : placeholder('ph-film', '🎬 Фильмы');
+      h += R.film ? (R.film.length ? shelf('🎬 Фильмы', R.film, 's-f', 'stab', 'film') : '') : placeholder('ph-film', '🎬 Фильмы');
       if (R.video && R.film && !R.tv.length && !R.video.length && !R.film.length) h += empty('Ничего не найдено. Попробуйте другое слово.', '🔍');
       if (R.vErr) h += '<p class="note">YouTube: ' + esc(R.vErr) + '</p>';
     } else if (t === 'tv') {
@@ -300,7 +307,10 @@
     });
     else if (key === 'live') TV.yt.search(q, { live: true }, done);
     else if (key === 'ytc') TV.yt.search(q, { type: 'channel' }, done);
-    else if (key === 'film') TV.arch.search(q, done);
+    else if (key === 'film') TV.movies.load(function () {   // каталог фильмов (новые первыми) + общественное достояние
+      var cat = TV.movies.items(TV.movies.find({ q: q }), 40);
+      TV.arch.search(q, function (e, a) { done(null, cat.concat(e ? [] : a || [])); });
+    });
   }
 
   /* Подсказки при вводе: каналы + история + YouTube */
@@ -340,9 +350,9 @@
     if (m === 'none') return '<section class="box"><h3>▶️ Видео на этом устройстве</h3><p class="note">Официальный плеер YouTube не поддерживает ' +
       'эту версию системы (' + esc(TV.device.label) + '). Можно подключить своё зеркало Invidious — тогда видео пойдут и здесь.</p>' +
       '<button class="btn primary" data-a="go" data-x="more/settings">Настройки → своё зеркало</button></section>';
-    if (m === 'official' && !TV.yt.hasKey()) return '<section class="box"><h3>🔑 Поиск и подборки YouTube</h3><p class="note">Видео играют в официальном ' +
-      'плеере YouTube. Для поиска и подборок нужен бесплатный ключ YouTube API (5 минут, один раз) — без ключа доступны ' +
-      'подборки официальных каналов — новинки кино, мультфильмы, аниме' + (TV.native ? '' : ' (в приложении BridgeTV)') + ' и поиск на сайте YouTube.</p>' +
+    if (m === 'official' && !TV.yt.hasKey()) return '<section class="box"><h3>🔑 Тренды и поиск YouTube</h3><p class="note">Видео играют в официальном ' +
+      'плеере YouTube. Для трендов, рубрик и поиска нужен бесплатный ключ YouTube API (5 минут, один раз) — без ключа доступны ' +
+      'подборки официальных каналов — новые мультфильмы и аниме' + (TV.native ? '' : ' (в приложении BridgeTV)') + ' и поиск на сайте YouTube.</p>' +
       '<button class="btn primary" data-a="go" data-x="more/ytkey">Как получить ключ</button></section>';
     return '';
   }
@@ -399,7 +409,9 @@
   }
   /* Полки: с ключом/зеркалом — рубрики; без них — официальные каналы киностудий (RSS) */
   /* Детский режим (родительский контроль): только детские подборки */
-  function feedsList() { return TV.settings.kids ? TV.filter(TV.yt.feeds, function (f) { return f.id === 'kidsnew'; }) : TV.yt.feeds; }
+  function feedsList() {
+    return TV.filter(TV.yt.feeds, function (f) { return TV.settings.kids ? f.id === 'kidsnew' : f.id !== 'new' && f.id !== 'classic'; });
+  }
   function archList() { return TV.settings.kids ? TV.filter(TV.arch.shelves, function (s) { return s.id === 'toons'; }) : TV.arch.shelves; }
   function ytSearchShelves() { return TV.settings.kids ? TV.filter(TV.yt.shelves, function (s) { return s.id === 'kids'; }) : TV.yt.shelves; }
   function ytShelves() {
@@ -408,7 +420,7 @@
     var out = [];
     // RSS-ленты официальных каналов — в приложении (без ключа) или через API (с ключом)
     if (m === 'official' && (TV.native || TV.yt.hasKey())) TV.each(feedsList(), function (f) { out.push({ id: 'f-' + f.id, title: f.title, feed: f }); });
-    if (TV.yt.canSearch()) out = out.slice(0, 3).concat(ytSearchShelves()).concat(out.slice(3));   // новинки — первыми
+    if (TV.yt.canSearch()) out = ytSearchShelves().concat(out);   // тренды YouTube — первыми
     return out;
   }
   function loadYtShelves() {
@@ -458,41 +470,49 @@
   /* ---------- Фильмы ----------
      С 0.2.4: поиск фильмов с фильтрами (жанр, годы, советские/зарубежные) по YouTube (полнометражные
      ролики) и Архиву кино, «Искать в Google», загрузки на устройство, фильмы с ПК и свои ссылки. */
-  var fm = { q: '', genre: 'all', years: 'all', origin: 'all', res: null };
-  function fmActive() { return !!(fm.q || fm.genre !== 'all' || fm.years !== 'all' || fm.origin !== 'all'); }
+  /* С 1.1.0 — каталог фильмов как в онлайн-кинотеатрах: постеры, жанры, годы, новые первыми;
+     страница фильма с описанием, официальным трейлером и «Где смотреть». Только фильмы —
+     видео YouTube сюда не подмешиваются (они на вкладке «Видео»). */
+  var fm = { q: '', genre: 'all', years: 'all' };
+  function fmActive() { return !!(fm.q || fm.genre !== 'all' || fm.years !== 'all'); }
+  var MV_SHELVES = ['action', 'comedy', 'thriller', 'scifi', 'horror', 'drama', 'family', 'anime', 'romance', 'doc', 'sport', 'war', 'classic'];
   S.movies = function () {
     var h = '<form class="sbar" data-form="fmsearch" action="#"><input type="search" name="q" autocomplete="off" autocorrect="off" ' +
-      'placeholder="Найти фильм: название, актёр, режиссёр" value="' + esc(fm.q) + '"><button class="sbtn" type="submit">Найти</button></form>';
-    h += '<div class="filters">' + chips(TV.films.genres, fm.genre, 'fmgenre') + chips(TV.films.yearsList, fm.years, 'fmyears') +
-      chips(TV.films.origins, fm.origin, 'fmorigin') + '</div>';
+      'placeholder="Найти фильм: название или режиссёр" value="' + esc(fm.q) + '"><button class="sbtn" type="submit">Найти</button></form>';
+    h += '<div class="filters">' + chips(TV.movies.genres, fm.genre, 'fmgenre') + chips(TV.movies.yearsList, fm.years, 'fmyears') + '</div>';
     var dls = TV.dl.all();
+    var after = loadArchShelves;
+    if (!TV.movies.ready()) {
+      h += placeholderBig();
+      after = function () { TV.movies.load(function (err) { if (tab === 'movies' && stacks.movies.length === 1) { if (err) TV.toast('Каталог фильмов не загрузился: ' + err); else render(true); } }); };
+    } else if (fmActive()) {
+      var found = TV.movies.find(fm);
+      h += '<div class="sec-h"><h3>' + (fm.q ? 'Найдено' : 'Фильмы') + ' · новые первыми</h3><i>' + found.length + '</i></div>';
+      h += found.length ? grid(TV.movies.items(found), 'fm-mv', 'ps') : empty('Ничего не найдено. Попробуйте другие фильтры или <button class="link" data-a="google">поиск в Google</button>.', '🎬');
+      if (fm.q) h += placeholder('arsh-q', '🎞 Бесплатно — общественное достояние');
+      after = fm.q ? function () {
+        TV.arch.search(fm.q, function (err, a) { fill('arsh-q', err || !a || !a.length ? '' : shelf('🎞 Бесплатно — общественное достояние', a, 'fm-ar')); });
+      } : null;
+    } else {
+      var cont = TV.filter(TV.history.all(), function (x) { return x.k !== 'ch' && x.k !== 'yt' && x.k !== 'tr' && x.id && TV.positions.get(x.k + x.id) > 0; });
+      if (cont.length) h += shelf('⏯ Продолжить просмотр', cont.slice(0, 15), 'mv-cont');
+      var ready = TV.filter(dls, function (d) { return d.done; });
+      if (ready.length) { var di = []; TV.each(ready, function (d) { di.push(TV.dl.item(d)); }); h += shelf('📥 Скачанные', di, 'mv-dl', 'go', 'movies/downloads'); }
+      // «Новинки» — художественные фильмы (документальные и прочее — в своих полках)
+      var fresh = TV.filter(TV.movies.find({}), function (m) { return m.g !== 'doc' && m.g !== 'other' && m.g !== 'sport'; });
+      h += shelf('🆕 Новинки', TV.movies.items(fresh, 24), 'mv-new', 'fmsel', 'years:y0');
+      TV.each(MV_SHELVES, function (g) {
+        var l = TV.movies.find({ genre: g });
+        if (l.length >= 4) h += shelf(TV.movies.genreName(g), TV.movies.items(l, 20), 'mv-' + g, 'fmsel', 'genre:' + g);
+      });
+      TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — бесплатно'); });
+      h += '<p class="note">Каталог — официальные данные кинопрокатчиков (Apple TV) и Wikidata, обновляется каждый день. ' +
+        'У каждого фильма — официальный трейлер и ссылки, где его посмотреть легально. «Бесплатно» — фильмы в общественном достоянии (archive.org).</p>';
+    }
     h += '<div class="tools"><button class="btn" data-a="google">🔎 Искать в Google</button>' +
       (TV.dl.available() ? '<button class="btn" data-a="go" data-x="movies/downloads">📥 Загрузки' + (dls.length ? ' (' + dls.length + ')' : '') + '</button>' : '') +
       '<button class="btn" data-a="scrollto" data-x="box-pc">💻 С компьютера</button>' +
       '<button class="btn" data-a="scrollto" data-x="box-links">🔗 По ссылке</button></div>';
-    var after = loadArchShelves;
-    if (fmActive()) {
-      if (!fm.res) { h += '<div class="loading-big"><span class="spin"></span></div>'; after = runFm; }
-      else {
-        var R = fm.res;
-        if (R.yt === null) h += placeholderBig();
-        else if (R.yt.length) h += '<div class="sec-h"><h3>▶️ Фильмы на YouTube</h3><i>' + R.yt.length + '</i></div>' + grid(R.yt, 'fm-yt', 'vs');
-        if (R.arch === null) h += placeholderBig();
-        else if (R.arch.length) h += '<div class="sec-h"><h3>🎞 Архив кино (общественное достояние)</h3><i>' + R.arch.length + '</i></div>' + grid(R.arch, 'fm-ar', 'vs');
-        if (R.yt && R.arch && !R.yt.length && !R.arch.length)
-          h += empty('Ничего не найдено. Попробуйте другие фильтры или «Искать в Google».', '🎬');
-        after = null;
-      }
-    } else {
-      var cont = TV.filter(TV.history.all(), function (x) { return x.k !== 'ch' && x.id && TV.positions.get(x.k + x.id) > 0; });
-      if (cont.length) h += shelf('⏯ Продолжить просмотр', cont.slice(0, 15), 'mv-cont');
-      var ready = TV.filter(dls, function (d) { return d.done; });
-      if (ready.length) { var di = []; TV.each(ready, function (d) { di.push(TV.dl.item(d)); }); h += shelf('📥 Скачанные', di, 'mv-dl', 'go', 'movies/downloads'); }
-      if (ytFeedsOk()) TV.each(feedsList(), function (f) { h += placeholder('fdsh-' + f.id, f.title); });
-      TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, s.title); });
-      h += '<p class="note">Новинки — трейлеры и премьеры с официальных каналов прокатчиков и онлайн-кинотеатров; аниме — с официальных ' +
-        'каналов правообладателей. «Архив кино» — фильмы в общественном достоянии (archive.org). Фильмы из архива, свои ссылки и файлы с ПК можно скачать на устройство (кнопка ⬇ в плеере).</p>';
-    }
 
     h += '<section class="box" id="box-links"><h3>🔗 Мои ссылки</h3>' +
       '<form class="form" data-form="addlink" action="#"><input name="u" type="url" placeholder="Ссылка на видео .m3u8 / .mp4" autocapitalize="off">' +
@@ -529,14 +549,26 @@
     return m === 'mirror' || (m === 'official' && (TV.native || TV.yt.hasKey()));
   }
   function placeholderBig() { return '<div class="loading-big"><span class="spin"></span></div>'; }
-  function runFm() {
-    var want = fm;
-    TV.films.search(fm.q, { genre: fm.genre, years: fm.years, origin: fm.origin }, function (res) {
-      if (want !== fm) return;
-      fm.res = res;
-      if (tab === 'movies' && stacks.movies.length === 1) render(true);
-    });
-  }
+
+  /* Страница фильма: постер, описание, трейлер, где смотреть, похожие */
+  S.film = function (p) {
+    var m = TV.movies.byId(p.id);
+    if (!m && !TV.movies.ready()) return { title: 'Фильм', html: placeholderBig(), after: function () { TV.movies.load(function () { if (top().s === 'film') render(true); }); } };
+    if (!m) return { title: 'Фильм', html: empty('Фильм не найден — каталог обновился.', '🎬') };
+    var facts = [m.y, TV.movies.genreName(m.g), m.min ? m.min + ' мин' : '', m.r].filter(function (x) { return !!x; }).join(' · ');
+    var h = '<div class="film"><div class="film-p"><img src="' + esc(m.p.replace('/300x450bb', '/600x900bb')) + '" alt="" onerror="this.src=\'' + esc(m.p) + '\'"></div>' +
+      '<div class="film-i"><h2>' + esc(m.t) + '</h2>' + (m.to ? '<div class="film-o">' + esc(m.to) + '</div>' : '') +
+      '<div class="film-f">' + esc(facts) + '</div>' + (m.dir ? '<div class="film-f">Режиссёр: ' + esc(m.dir) + '</div>' : '') +
+      '<div class="tools">' + (m.tr ? '<button class="btn primary" data-a="trailer" data-x="' + esc(m.id) + '">▶ Трейлер</button>' : '') +
+      '<button class="btn" data-a="mvfav" data-x="' + esc(m.id) + '">' + (TV.fav.has({ k: 'mv', id: m.id }) ? '★ В избранном' : '☆ В избранное') + '</button></div>' +
+      (m.d ? '<p class="film-d">' + esc(m.d) + '</p>' : '') +
+      '<h3>Где смотреть</h3><div class="tools">';
+    TV.each(TV.movies.where(m), function (w) { h += '<button class="btn" data-a="ext" data-x="' + esc(w.u) + '">' + esc(w.n) + ' ↗</button>'; });
+    h += '</div><p class="note">BridgeTV показывает только официальный трейлер. Сам фильм — в онлайн-кинотеатрах (обычно по подписке или покупке).</p></div></div>';
+    var like = TV.filter(TV.movies.find({ genre: m.g }), function (x) { return x.id !== m.id; });
+    if (like.length) h += shelf('Похожие — ' + (TV.movies.genreName(m.g) || 'фильмы'), TV.movies.items(like, 20), 'mv-like-' + m.id);
+    return { title: m.t, html: h };
+  };
 
   /* Загрузки на устройство (только в приложении) */
   S.downloads = function () {
@@ -556,14 +588,10 @@
   };
 
   function loadArchShelves() {
-    // Очередь: сначала официальные киностудии (YouTube), потом архив
+    // Полки «Бесплатно» — фильмы в общественном достоянии (archive.org). YouTube сюда не подмешивается.
     var jobs = [];
-    if (ytFeedsOk()) TV.each(feedsList(), function (f) {
-      jobs.push({ ph: 'fdsh-' + f.id, key: 'fd:' + f.id, title: f.title, l: 'fdl-' + f.id,
-        load: function (cb) { TV.yt.feed(f, cb); } });
-    });
     TV.each(archList(), function (s) {
-      jobs.push({ ph: 'arsh-' + s.id, key: 'ar:' + s.id, title: s.title, l: 'arl-' + s.id, more: s.id,
+      jobs.push({ ph: 'arsh-' + s.id, key: 'ar:' + s.id, title: '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — бесплатно', l: 'arl-' + s.id, more: s.id,
         load: function (cb) { TV.arch.query(s.q, 40, cb); } });
     });
     var i = 0;
@@ -612,7 +640,7 @@
       { id: 'ch', name: '📺 Каналы', items: TV.filter(TV.fav.of('ch'), function (x) { return TV.catalog.byId(x.id); }) },
       { id: 'yt', name: '▶️ Видео', items: TV.fav.of('yt') },
       { id: 'ytc', name: '👤 YouTube-каналы', items: TV.subs.all().concat(TV.fav.of('ytc')) },
-      { id: 'film', name: '🎬 Фильмы и ссылки', items: TV.filter(TV.fav.all(), function (x) { return x.k === 'arch' || x.k === 'url' || x.k === 'pc'; }) }
+      { id: 'film', name: '🎬 Фильмы и ссылки', items: TV.filter(TV.fav.all(), function (x) { return x.k === 'arch' || x.k === 'url' || x.k === 'pc' || x.k === 'mv'; }) }
     ];
     var g = TV.find(groups, function (x) { return x.id === ui.favTab; }) || groups[0];
     var cs = []; TV.each(groups, function (x) { cs.push({ id: x.id, name: x.name, count: x.items.length }); });
@@ -953,9 +981,20 @@
       case 'yvdur': yv.dur = x; yv.res = null; yv.page = 1; render(); break;
       case 'yvsort': yv.sort = x; yv.res = null; yv.page = 1; render(); break;
       case 'yvmore': yv.page++; runYv(true); TV.toast('Загружаю ещё…'); break;
-      case 'fmgenre': fm.genre = x; fm.res = null; render(); break;
-      case 'fmyears': fm.years = x; fm.res = null; render(); break;
-      case 'fmorigin': fm.origin = x; fm.res = null; render(); break;
+      case 'fmgenre': fm.genre = x; render(); break;
+      case 'fmyears': fm.years = x; render(); break;
+      case 'fmsel': { var kv = String(x).split(':'); if (kv[0] === 'genre') fm.genre = kv[1]; else fm.years = kv[1]; switchTab('movies', true); stacks.movies = [stacks.movies[0]]; render(); window.scrollTo(0, 0); break; }
+      case 'film': push({ s: 'film', id: x }); break;
+      case 'trailer': {
+        var mt = TV.movies.byId(x);
+        if (mt && mt.tr) TV.player.open([{ k: 'tr', id: 'tr' + mt.id, n: mt.t, sub: 'Трейлер · ' + mt.y, img: mt.p, u: mt.tr }], 0);
+        break;
+      }
+      case 'mvfav': {
+        var mf = TV.movies.byId(x);
+        if (mf) { TV.toast(TV.fav.toggle({ k: 'mv', id: mf.id, n: mf.t, sub: String(mf.y), img: mf.p }) ? '★ Добавлено в избранное' : 'Убрано из избранного'); render(true); }
+        break;
+      }
       case 'google': TV.films.google(fm.q); break;
       case 'scrollto': { var t2 = document.getElementById(x); if (t2 && t2.scrollIntoView) t2.scrollIntoView(true); window.scrollBy(0, -60); break; }
       case 'dlplay': { var d = TV.dl.get(x); if (d && d.done) TV.player.open([TV.dl.item(d)], 0); break; }
@@ -984,7 +1023,7 @@
       case 'set':
         if (x === 'kids' && !TV.settings.kids && !/^\d{4}$/.test(TV.settings.pin || '')) { TV.toast('Сначала задайте PIN (4 цифры)'); break; }
         TV.settings[x] = !TV.settings[x]; TV.saveSettings();
-        if (x === 'showYT' || x === 'safe' || x === 'kids') { cache = {}; ui.res = null; fm.res = null; yv.res = null; buildTabs(); }
+        if (x === 'showYT' || x === 'safe' || x === 'kids') { cache = {}; ui.res = null; yv.res = null; buildTabs(); }
         if (x === 'kids') { pinOk = !TV.settings.kids; TV.toast(TV.settings.kids ? '🧸 Детский режим включён' : 'Детский режим выключен'); }
         if (x === 'epg' && TV.settings.epg) TV.epg.load();
         render(true); break;
@@ -1076,7 +1115,7 @@
       if (document.activeElement) document.activeElement.blur();
       var qq = String(f.q.value || '').replace(/^\s+|\s+$/g, '');
       if (qq) TV.searches.add(qq);
-      if (kind === 'ytsearch') { yv.q = qq; yv.res = null; yv.page = 1; } else { fm.q = qq; fm.res = null; }
+      if (kind === 'ytsearch') { yv.q = qq; yv.res = null; yv.page = 1; } else { fm.q = qq; }
       render(); return;
     }
     if (!/^https?:\/\//i.test(u)) { TV.toast('Нужна ссылка, начинающаяся с http:// или https://'); return; }

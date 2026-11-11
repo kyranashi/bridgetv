@@ -7,7 +7,7 @@ name: Веб-версия на GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ["web/**", "data/**", "index.html", "tools/build_epg.py", ".github/workflows/pages.yml"]
+    paths: ["web/**", "data/**", "index.html", "tools/build_epg.py", "tools/build_movies.py", ".github/workflows/pages.yml"]
   schedule:
     - cron: "20 2 * * *"        # каждый день — свежая программа передач (data/epg.json)
   workflow_dispatch: {}
@@ -37,6 +37,9 @@ jobs:
       - name: Программа передач (EPG)
         continue-on-error: true      # гид недоступен — сайт всё равно публикуется, приложение просто не покажет программу
         run: python tools/build_epg.py
+      - name: Каталог фильмов (Apple + Wikidata)
+        continue-on-error: true      # источник недоступен — сайт публикуется, приложение покажет «Бесплатно» и поиск
+        run: python tools/build_movies.py
       - name: Подготовить сайт
         run: |
           mkdir -p _site

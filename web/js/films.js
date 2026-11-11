@@ -96,6 +96,78 @@
     }, f);
   };
 
+  /* ================================================================ каталог фильмов (1.1.0) */
+  /* data/movies.json собирает tools/build_movies.py (каталог Apple + русские названия из Wikidata)
+     раз в день и публикует на GitHub Pages. Только фильмы, новые первыми. Сами фильмы не
+     показываются — официальный трейлер и ссылки «Где смотреть». Держим в памяти. */
+  var MV = null, mvT = 0, mvBusy = false, mvWait = [];
+  var M = TV.movies = {};
+  M.genres = [
+    { id: 'all', name: 'Все жанры' }, { id: 'action', name: 'Боевики' }, { id: 'comedy', name: 'Комедии' },
+    { id: 'drama', name: 'Драмы' }, { id: 'thriller', name: 'Триллеры' }, { id: 'horror', name: 'Ужасы' },
+    { id: 'scifi', name: 'Фантастика' }, { id: 'family', name: 'Семейные и мультфильмы' }, { id: 'anime', name: 'Аниме' },
+    { id: 'romance', name: 'Мелодрамы' }, { id: 'doc', name: 'Документальные' }, { id: 'sport', name: 'Спорт' },
+    { id: 'war', name: 'Военные' }, { id: 'classic', name: 'Классика' }, { id: 'other', name: 'Другое' }
+  ];
+  M.yearsList = [
+    { id: 'all', name: 'Любой год' }, { id: 'y0', name: String(new Date().getFullYear()), from: new Date().getFullYear(), to: 9999 },
+    { id: 'y1', name: String(new Date().getFullYear() - 1), from: new Date().getFullYear() - 1, to: new Date().getFullYear() - 1 },
+    { id: 'y2', name: String(new Date().getFullYear() - 2), from: new Date().getFullYear() - 2, to: new Date().getFullYear() - 2 },
+    { id: 'y20', name: '2020-е', from: 2020, to: 2029 }, { id: 'y10', name: '2010-е', from: 2010, to: 2019 }, { id: 'old', name: 'Раньше', from: 0, to: 2009 }
+  ];
+  M.genreName = function (id) { var g = TV.find(M.genres, function (x) { return x.id === id; }); return g && id !== 'all' ? g.name : ''; };
+  M.ready = function () { return !!MV; };
+  M.load = function (cb) {
+    if (MV && TV.now() - mvT < 12 * 36e5) { if (cb) cb(null); return; }
+    if (cb) mvWait.push(cb);
+    if (mvBusy) return;
+    mvBusy = true;
+    var src = [];
+    if (/^https?:/.test(location.protocol)) src.push('../data/movies.json');
+    if (TV.PAGES) src.push(TV.PAGES + '/data/movies.json');
+    var i = 0;
+    (function next(lastErr) {
+      var done = function (err) { mvBusy = false; var w = mvWait; mvWait = []; TV.each(w, function (f) { f(err); }); };
+      if (i >= src.length) return done(lastErr || 'каталог фильмов недоступен');
+      TV.ajax(src[i++] + '?d=' + Math.floor(TV.now() / 36e5), { timeout: 40000 }, function (err, j) {
+        if (err || !j || !TV.isArray(j.movies)) return next(err || 'формат');
+        var ok = [], web = /^https:\/\/[^\s"'<>]+$/;
+        TV.each(j.movies, function (m) {           // берём только корректные записи (защита от подмены)
+          if (m && typeof m.id === 'string' && typeof m.t === 'string' && web.test(m.p || '') && (!m.tr || web.test(m.tr)) && (!m.url || web.test(m.url))) ok.push(m);
+        });
+        MV = ok; mvT = TV.now();
+        done(null);
+      });
+    })('');
+  };
+  /* Детский режим: только семейные с рейтингом G / PG */
+  function allowed(m) { return !TV.settings.kids || (m.g === 'family' && /^(G|PG|NR|)$/.test(m.r || '')); }
+  /* f: { q, genre, years } -> фильмы, новые первыми (каталог уже так отсортирован) */
+  M.find = function (f) {
+    f = f || {};
+    var q = TV.norm(f.q || ''), y = TV.find(M.yearsList, function (x) { return x.id === f.years && x.id !== 'all'; });
+    return TV.filter(MV || [], function (m) {
+      if (!allowed(m)) return false;
+      if (f.genre && f.genre !== 'all' && m.g !== f.genre) return false;
+      if (y && (m.y < y.from || m.y > y.to)) return false;
+      if (q && TV.norm(m.t + ' ' + (m.to || '') + ' ' + (m.dir || '')).indexOf(q) < 0) return false;
+      return true;
+    });
+  };
+  M.byId = function (id) { return TV.find(MV || [], function (m) { return m.id === id; }); };
+  /* Карточка для сеток приложения */
+  M.item = function (m) { return { k: 'mv', id: m.id, n: m.t, sub: m.y + (M.genreName(m.g) ? ' · ' + M.genreName(m.g) : ''), img: m.p }; };
+  M.items = function (list, max) { var out = []; for (var i = 0; i < list.length && (!max || i < max); i++) out.push(M.item(list[i])); return out; };
+  /* Где смотреть (легальные сервисы): поиск по названию */
+  M.where = function (m) {
+    var q = encodeURIComponent(m.t + (m.y ? ' ' + m.y : ''));
+    var out = [{ n: 'Кинопоиск', u: 'https://www.kinopoisk.ru/index.php?kp_query=' + encodeURIComponent(m.t) }];
+    if (m.url) out.push({ n: 'Apple TV', u: m.url });
+    out.push({ n: 'Иви', u: 'https://www.ivi.ru/search/?q=' + encodeURIComponent(m.t) });
+    out.push({ n: 'Найти в Google', u: 'https://www.google.com/search?q=' + q + '+смотреть+онлайн+легально' });
+    return out;
+  };
+
   F.google = function (q) {
     TV.openExternal('https://www.google.com/search?q=' + encodeURIComponent((q || '') + ' фильм смотреть онлайн'));
   };

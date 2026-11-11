@@ -35,3 +35,4 @@ docs/archive/
 
 # Программа передач — собирается в CI и публикуется на GitHub Pages, в репозиторий не коммитится
 data/epg.json
+data/movies.json

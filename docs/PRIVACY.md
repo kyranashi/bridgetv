@@ -21,6 +21,7 @@ BridgeTV **не собирает, не хранит у себя и не пере
 | GitHub, jsDelivr | обновление каталога каналов и страница плеера YouTube | [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement) |
 | GitHub Pages (`kyranashi.github.io`) | программа передач (раз в несколько часов) | GitHub Privacy Statement |
 | Распознавание речи Google / системы Android | только когда вы нажали 🎤 — звук обрабатывает сервис распознавания вашего устройства или браузера | правила Google / производителя |
+| Apple (`mzstatic.com`, `video-ssl.itunes.apple.com`) | постеры каталога фильмов и официальные трейлеры — когда вы открываете вкладку «Фильмы» или трейлер | [Политика конфиденциальности Apple](https://www.apple.com/legal/privacy/) |
 | archive.org | фильмы «Архива кино» | правила Internet Archive |
 | wsrv.nl | только в лёгком режиме — уменьшение логотипов каналов | правила wsrv.nl |
 | Ваше зеркало Invidious/Piped | только если вы указали его в Настройках | правила вашего сервера |

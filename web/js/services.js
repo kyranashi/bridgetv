@@ -312,16 +312,14 @@
     }
   };
 
-  /* Полки вкладки «Видео» (нужен ключ API или зеркало); d — длительность (long — от 20 минут) */
+  /* Полки вкладки «Видео» (нужен ключ API или зеркало). С 1.1.0 — только YouTube: тренды первыми,
+     фильмов и трейлеров здесь нет (они во вкладке «Фильмы»); свежее — первым (sort: upload_date). */
   TV.yt.shelves = [
-    { id: 'snew', title: '🆕 Новинки кино 2026', q: 'новинки кино 2026 фильм', d: 'long', sort: 'upload_date' },
-    { id: 'strailer', title: '🎟 Трейлеры премьер', q: 'трейлер 2026 на русском', sort: 'upload_date' },
-    { id: 'sseries', title: '📺 Новые сериалы', q: 'новый сериал 2026 все серии', d: 'long', sort: 'upload_date' },
-    { id: 'trend', title: '🔥 В тренде', trending: true },
-    { id: 'movie', title: '🎬 Фильмы целиком', q: 'фильм полностью', d: 'long' },
-    { id: 'anime', title: '🌸 Аниме', q: 'аниме на русском', d: 'medium' },
+    { id: 'trend', title: '🔥 В тренде на YouTube', trending: true },
+    { id: 'tnews', title: '📰 Новое: новости и события', q: 'новости сегодня', sort: 'upload_date' },
+    { id: 'anime', title: '🌸 Аниме', q: 'аниме на русском', d: 'medium', sort: 'upload_date' },
     { id: 'kids', title: '🧸 Мультфильмы', q: 'мультфильмы для детей' },
-    { id: 'music', title: '🎵 Музыка и клипы', q: 'новые клипы 2026' },
+    { id: 'music', title: '🎵 Музыка и клипы', q: 'новые клипы', sort: 'upload_date' },
     { id: 'fun', title: '😂 Юмор', q: 'юмор шоу лучшее' },
     { id: 'science', title: '🔬 Наука и познавательное', q: 'научно популярный фильм', d: 'long' },
     { id: 'sport', title: '⚽ Спорт', q: 'футбол обзор матча' },

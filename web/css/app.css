@@ -370,3 +370,21 @@ html.font130 #app, html.font130 #toast { zoom: 1.3; }
 .kids-bar { margin: 8px 0 12px; padding: 10px 14px; border-radius: 14px; background: linear-gradient(135deg, rgba(79,70,229,.25), rgba(20,184,166,.25)); display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: space-between; justify-content: space-between; }
 .mic { font-size: 18px; }
 textarea.code { width: 100%; min-height: 110px; background: #0f141f; color: #e8ecf3; border: 1px solid #2a3346; border-radius: 12px; padding: 10px; font: 13px/1.4 monospace; box-sizing: border-box; }
+
+/* ================= 1.1.0: каталог фильмов (постеры, страница фильма) ================= */
+.card.v.mv .th { padding-top: 150%; }
+.card.v.mv .t { -webkit-line-clamp: 2; font-size: 13.5px; }
+.sh-row .card.v.mv { width: 140px; }
+.ps .card { width: calc(33.333% - 10px); }
+@media (min-width: 600px) { .ps .card { width: calc(25% - 10px); } }
+@media (min-width: 900px) { .ps .card { width: calc(16.666% - 10px); } }
+@media (min-width: 1300px) { .ps .card { width: calc(12.5% - 10px); } }
+.film { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin: 6px 0 18px; }
+.film-p { width: 220px; max-width: 40%; margin: 0 20px 14px 0; }
+.film-p img { width: 100%; border-radius: 14px; display: block; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.film-i { -webkit-flex: 1; flex: 1; min-width: 260px; }
+.film-i h2 { margin: 0 0 4px; font-size: 24px; line-height: 1.2; }
+.film-i h3 { margin: 18px 0 6px; font-size: 16px; }
+.film-o { color: #8a94a6; margin-bottom: 6px; }
+.film-f { color: #c3cad6; font-size: 14px; margin: 2px 0; }
+.film-d { color: #d6dce6; line-height: 1.5; font-size: 15px; }
