@@ -26,6 +26,8 @@
       { "from": "../data", "to": "www/data", "filter": ["catalog.js", "logos/**"] }
     ],
     "asar": true,
+    "compression": "maximum",
+    "electronLanguages": ["ru", "en-US"],
     "electronFuses": {
       "runAsNode": false,
       "enableCookieEncryption": true,
