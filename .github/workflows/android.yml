@@ -40,11 +40,19 @@ jobs:
       - name: Постоянный ключ подписи из секретов
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KSP: ${{ secrets.ANDROID_KS_PASS }}
         run: |
           if [ -n "$KS" ]; then
             echo "$KS" | base64 -d > "$RUNNER_TEMP/bridgetv-release.p12"
-            echo "BTV_KEYSTORE=$RUNNER_TEMP/bridgetv-release.p12" >> "$GITHUB_ENV"
-            echo "Подпись: постоянный ключ проекта"
+            # Сначала проверяем пароль: неверный пароль не должен ломать выпуск (1.2.0)
+            if keytool -list -storetype PKCS12 -keystore "$RUNNER_TEMP/bridgetv-release.p12" -storepass:env KSP >/dev/null 2>&1; then
+              echo "BTV_KEYSTORE=$RUNNER_TEMP/bridgetv-release.p12" >> "$GITHUB_ENV"
+              echo "Подпись: постоянный ключ проекта"
+            else
+              rm -f "$RUNNER_TEMP/bridgetv-release.p12"
+              echo "::warning title=Ключ подписи Android::Пароль ANDROID_KS_PASS не подходит к ключу ANDROID_KEYSTORE_B64 — APK подписан отладочным ключом. Перезадайте пароль (docs/ANDROID.md)."
+              echo "### ⚠️ APK подписан отладочным ключом: пароль ANDROID_KS_PASS не подходит к ключу" >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
             echo "Подпись: отладочный ключ (секрет ANDROID_KEYSTORE_B64 не задан)"
           fi

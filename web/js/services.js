@@ -253,7 +253,14 @@
       return base + '?v=' + enc(id) + '&hl=ru';
     },
     webUrl: function (id) { return 'https://www.youtube.com/watch?v=' + id; },
-    searchWebUrl: function (q) { return 'https://www.youtube.com/results?search_query=' + enc(q); }
+    searchWebUrl: function (q) { return 'https://www.youtube.com/results?search_query=' + enc(q); },
+    /* Открыть сайт YouTube (поиск или видео) — без ключа API приложение само искать не может.
+       ПК: отдельное окно программы (desktop/main.js: openYouTube); Android: приложение YouTube или браузер;
+       остальное — браузер. */
+    openSite: function (url) {
+      if (TV.platform === 'desktop' && TV.callNative({ cmd: 'ytwin', url: url })) return;
+      TV.openExternal(url);
+    }
   };
 
   /* Видео официального канала */
@@ -363,6 +370,10 @@
     shelves: [
       // Советских фильмов здесь нет: в РФ/РБ они, как правило, ещё охраняются (см. docs/LEGAL.md) —
       // они идут с официальных каналов киностудий (TV.yt.studios)
+      // Новые поступления: фильмы, недавно добавленные в архив. Пометку «общественное достояние» ставит сам
+      // загрузивший и иногда ошибается (встречались боевики 1980-х) — поэтому ещё и год выхода до 1964:
+      // американские фильмы тех лет без продления прав чаще всего действительно в общественном достоянии.
+      { id: 'fresh', title: '🆕 Новые поступления', q: 'collection:(feature_films OR SciFi_Horror OR Comedy_Films OR Film_Noir) AND licenseurl:(*publicdomain*) AND year:[1890 TO 1963]', sort: 'addeddate desc' },
       { id: 'toons', title: '🧸 Старые мультфильмы', q: 'collection:(classic_cartoons)' },
       { id: 'classic', title: '🎬 Классика мирового кино', q: 'collection:(feature_films)' },
       { id: 'scifi', title: '🚀 Фантастика и ужасы', q: 'collection:(SciFi_Horror)' },
@@ -370,9 +381,10 @@
       { id: 'noir', title: '🕵️ Нуар', q: 'collection:(Film_Noir)' },
       { id: 'silent', title: '🎩 Немое кино', q: 'collection:(silent_films)' }
     ],
-    query: function (q, rows, cb) {
+    /* sort: по умолчанию — самые популярные; 'addeddate desc' — новые поступления */
+    query: function (q, rows, cb, sort) {
       var url = 'https://archive.org/advancedsearch.php?q=' + enc(q + ' AND mediatype:(movies)') +
-        '&fl[]=identifier&fl[]=title&fl[]=year&fl[]=runtime&rows=' + (rows || 40) + '&sort[]=downloads+desc&output=json';
+        '&fl[]=identifier&fl[]=title&fl[]=year&fl[]=runtime&rows=' + (rows || 40) + '&sort[]=' + enc(sort || 'downloads desc') + '&output=json';
       TV.ajax(url, { timeout: 20000 }, function (err, j) {
         if (err) return cb(err);
         var out = [];
@@ -401,7 +413,7 @@
        общественного достояния и только для старых фильмов (новые законно бесплатно не выкладываются). */
     findFilm: function (title, year, cb) {
       var t = String(title || '').replace(/[():"\\\[\]{}^~*?]/g, ' ').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
-      if (!t || !year || year > 1970) return cb(null, null);
+      if (!t || !year || year > 1963) return cb(null, null);
       // Только записи с явной пометкой «общественное достояние» (licenseurl …/publicdomain/…): в коллекциях
       // архива встречаются чужие загрузки охраняемых фильмов — их показывать нельзя (проверено 12.11.2026).
       TV.arch.query('title:("' + t + '") AND year:[' + (year - 1) + ' TO ' + (year + 1) + '] AND licenseurl:(*publicdomain*) AND ' + COLL, 5, function (err, list) {

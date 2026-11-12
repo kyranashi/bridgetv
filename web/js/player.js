@@ -780,7 +780,7 @@
     else if (a === 'retry') { if (state.ch) state.variants = TV.health.variants(state.ch); state.vi = 0; tryVariant(); }
     else if (a === 'src') { if (state.variants.length > 1) { state.vi = (state.vi + 1) % state.variants.length; tryVariant(); } }
     else if (a === 'report') { TV.each(state.ch.v, function (v) { TV.health.mark(v.u, false); }); TV.emit('health'); TV.toast('Канал перенесён в «Не работают»'); P.step(1); }
-    else if (a === 'web') { TV.openExternal(TV.yt.webUrl(cur().id)); }
+    else if (a === 'web') { TV.yt.openSite(TV.yt.webUrl(cur().id)); }
     else if (a === 'fav') {
       var it = state.ch ? { k: 'ch', id: state.ch.id, n: state.ch.n, img: state.ch.l } : cur();
       TV.toast(TV.fav.toggle(it) ? '★ Добавлено в избранное' : 'Убрано из избранного');

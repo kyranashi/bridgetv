@@ -109,6 +109,7 @@ ipcMain.on('tv:msg', (e, json) => {
     case 'save': return save(m.key, m.value);
     case 'awake': return awake(!!m.on);
     case 'open': if (isWeb(m.url)) shell.openExternal(m.url); return;
+    case 'ytwin': if (typeof m.url === 'string') openYouTube(m.url); return;   // поиск/видео на сайте YouTube — окно программы
     case 'download': return download(String(m.id || ''), m.url);
     case 'dlDelete': { const f = inside(DL(), path.basename(String(m.file || ''))); if (f) fs.unlink(f, () => {}); return; }
     default: return;                                                    // неизвестные команды игнорируются
@@ -196,6 +197,34 @@ function createWindow() {
   win.on('enter-full-screen', () => js('document.documentElement.classList.add("fs")'));
   win.on('leave-full-screen', () => js('document.documentElement.classList.remove("fs")'));
   win.loadURL(ORIGIN + '/web/index.html');
+}
+
+// ------------------------------------------------------------------ окно сайта YouTube (1.2.0)
+// Без ключа API приложение не может само получить результаты поиска YouTube, поэтому поиск и просмотр
+// открываются на самом сайте YouTube — в отдельном окне программы (как во встроенном браузере).
+// Окно изолировано от приложения: своя сессия (cookies только YouTube), песочница, без моста TVBridge,
+// переходы — только по адресам YouTube и входа Google, остальное — в обычный браузер.
+let ytWin = null;
+const YT_HOSTS = /^(www\.|m\.|music\.)?youtube\.com$|^youtu\.be$|^consent\.youtube\.com$|^accounts\.google\.com$|^consent\.google\.com$|^(www\.)?google\.com$/;
+const ytAllowed = (url) => { try { const u = new URL(url); return u.protocol === 'https:' && YT_HOSTS.test(u.hostname); } catch (e) { return false; } };
+function openYouTube(url) {
+  if (!ytAllowed(url)) return;
+  if (ytWin && !ytWin.isDestroyed()) { ytWin.loadURL(url); if (ytWin.isMinimized()) ytWin.restore(); ytWin.focus(); return; }
+  const ses = session.fromPartition('persist:youtube');
+  ses.setPermissionRequestHandler((wc, perm, cb) => cb(perm === 'fullscreen'));
+  ses.setPermissionCheckHandler((wc, perm) => perm === 'fullscreen');
+  ytWin = new BrowserWindow({
+    width: 1200, height: 780, backgroundColor: '#0f0f0f', title: 'YouTube — BridgeTV', autoHideMenuBar: true,
+    icon: path.join(__dirname, 'build', 'icon.png'),
+    webPreferences: { session: ses, contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true,
+      allowRunningInsecureContent: false, spellcheck: false, devTools: !app.isPackaged }
+  });
+  const wc = ytWin.webContents;
+  wc.setWindowOpenHandler(({ url: u }) => { if (ytAllowed(u)) ytWin.loadURL(u); else if (isWeb(u)) shell.openExternal(u); return { action: 'deny' }; });
+  wc.on('will-navigate', (e, u) => { if (!ytAllowed(u)) { e.preventDefault(); if (isWeb(u)) shell.openExternal(u); } });
+  wc.on('will-redirect', (e, u) => { if (!ytAllowed(u)) { e.preventDefault(); if (isWeb(u)) shell.openExternal(u); } });
+  ytWin.on('closed', () => { ytWin = null; });
+  ytWin.loadURL(url);
 }
 
 app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });

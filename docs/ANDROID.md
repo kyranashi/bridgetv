@@ -37,6 +37,10 @@ Android ставит обновление поверх, только если о
   # и относительный путь там не находится); Resolve-Path делает путь полным для .NET
   cd "<папка проекта BridgeTV>"
   [Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path "releases\android-signing\bridgetv-release.p12"))) | gh secret set ANDROID_KEYSTORE_B64 -R kyranashi/bridgetv
+  # пароль — только то, что после «Пароль: » в PASSWORD.txt (без подписи и пробелов); команда берёт его сама:
+  $p = ((Get-Content "releases\android-signing\PASSWORD.txt" -Encoding UTF8) -match '^Пароль:')[0] -replace '^Пароль:\s*', ''
+  gh secret set ANDROID_KS_PASS -R kyranashi/bridgetv --body $p.Trim()
+  # Если пароль не подойдёт, сборка не упадёт: APK подпишется отладочным ключом, а в отчёте сборки будет предупреждение.
   gh secret set ANDROID_KS_PASS -R kyranashi/bridgetv     # вставить пароль из PASSWORD.txt
   ```
   или через сайт: Settings → Secrets and variables → Actions → New repository secret.

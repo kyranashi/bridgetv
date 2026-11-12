@@ -369,8 +369,9 @@
     }
     h += '</div>';
     if ((yv.q || yv.type === 'live') && !TV.yt.canSearch()) {
-      // без ключа и зеркала искать негде — откроем поиск на сайте YouTube
-      if (yv.q) TV.openExternal(TV.yt.searchWebUrl(yv.q));
+      // без ключа и зеркала приложение само искать не может — сразу открываем результаты на сайте YouTube
+      // (на ПК — в окне программы, на Android — в приложении YouTube)
+      if (yv.q) { TV.yt.openSite(TV.yt.searchWebUrl(yv.q)); TV.toast('Результаты — на YouTube' + (TV.platform === 'desktop' ? ' (окно программы)' : '')); }
       yv.q = ''; yv.type = 'video';
       return { title: '▶️ Видео', html: h + ytModeNote(), after: loadYtShelves };
     }
@@ -678,7 +679,7 @@
       load: function (cb) { TV.yt.feed(studio, cb); } });
     TV.each(archList(), function (s) {
       jobs.push({ ph: 'arsh-' + s.id, key: 'ar:' + s.id, title: '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние', l: 'arl-' + s.id, more: s.id,
-        load: function (cb) { TV.arch.query(s.q, 40, cb); } });
+        load: function (cb) { TV.arch.query(s.q, 40, cb, s.sort); } });
     });
     var i = 0;
     function nextShelf() {
