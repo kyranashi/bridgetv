@@ -27,7 +27,6 @@ desktop.ini
 # Личный файл итогов и планов — только на ПК
 ИТОГИ_И_ПЛАН.md
 desktop/node_modules/
-desktop/package-lock.json
 
 # Только на ПК разработчика (не публикуются)
 ios/legacy/

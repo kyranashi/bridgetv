@@ -19,7 +19,7 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -32,10 +32,19 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: |
           V="$(grep -o "TV.VERSION = '[^']*'" ../web/js/core.js | cut -d"'" -f2)"
+          # Точные версии всех библиотек — из package-lock.json (npm ci ставит ровно их и сверяет хэши).
+          # Без файла (первый запуск) — npm install, а получившийся файл выкладывается артефактом,
+          # чтобы его закоммитить. Так в сборку не подтянется подменённая «свежая» версия чужой библиотеки.
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
           npm pkg set version="$V"
-          npm install --no-audit --no-fund --ignore-scripts=false
           npx electron --version || true
           npm run dist
+      - name: Файл версий библиотек (если его ещё нет в репозитории)
+        if: hashFiles('desktop/package-lock.json') == '' && matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktop-package-lock
+          path: desktop/package-lock.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: BridgeTV-desktop-${{ matrix.os }}

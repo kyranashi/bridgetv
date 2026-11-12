@@ -397,6 +397,19 @@
       parts.push(g && g.id === 'toon' ? 'collection:(animationandcartoons OR classic_cartoons)' : COLL);
       TV.arch.query(parts.join(' AND '), 40, cb);
     },
+    /* Есть ли этот фильм в общественном достоянии (1.2.0): точное название и год ±1, только в коллекциях
+       общественного достояния и только для старых фильмов (новые законно бесплатно не выкладываются). */
+    findFilm: function (title, year, cb) {
+      var t = String(title || '').replace(/[():"\\\[\]{}^~*?]/g, ' ').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+      if (!t || !year || year > 1970) return cb(null, null);
+      // Только записи с явной пометкой «общественное достояние» (licenseurl …/publicdomain/…): в коллекциях
+      // архива встречаются чужие загрузки охраняемых фильмов — их показывать нельзя (проверено 12.11.2026).
+      TV.arch.query('title:("' + t + '") AND year:[' + (year - 1) + ' TO ' + (year + 1) + '] AND licenseurl:(*publicdomain*) AND ' + COLL, 5, function (err, list) {
+        if (err || !list || !list.length) return cb(err, null);
+        var want = TV.norm(t), best = TV.find(list, function (x) { return TV.norm(x.n) === want; });
+        cb(null, best || null);
+      });
+    },
     /* Выбор видеофайла: mp4 (H.264). В лёгком режиме — самый маленький. */
     resolve: function (id, cb) {
       TV.ajax('https://archive.org/metadata/' + enc(id), { timeout: 20000 }, function (err, j) {

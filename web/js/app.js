@@ -506,11 +506,16 @@
       // «Новинки» — художественные фильмы (документальные и прочее — в своих полках)
       var fresh = TV.filter(TV.movies.find({}), function (m) { return m.g !== 'doc' && m.g !== 'other' && m.g !== 'sport'; });
       h += shelf('🆕 Новинки', TV.movies.items(fresh, 24), 'mv-new', 'fmsel', 'years:y0');
+      // «Можно смотреть бесплатно» — полные фильмы, которые законно доступны: официальные каналы
+      // киностудий (сами правообладатели, в плеере YouTube) и общественное достояние (archive.org)
+      h += '<div class="free-h"><h2>▶ Можно смотреть бесплатно</h2><p class="note">Полные фильмы целиком — законно: от самих киностудий и из архива общественного достояния.</p></div>';
+      if (ytFeedsOk() && !TV.settings.kids) h += placeholder('fdsh-classic', '🎞 Мосфильм и Беларусьфильм — официальные каналы');
+      TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние'); });
+      h += '<div class="free-h"><h2>🎬 Каталог по жанрам</h2><p class="note">Описание, официальный трейлер и где посмотреть.</p></div>';
       TV.each(MV_SHELVES, function (g) {
         var l = TV.movies.find({ genre: g });
         if (l.length >= 4) h += shelf(TV.movies.genreName(g), TV.movies.items(l, 20), 'mv-' + g, 'fmsel', 'genre:' + g);
       });
-      TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — бесплатно'); });
       h += '<p class="note">Каталог — официальные данные кинопрокатчиков (Apple TV) и Wikidata, обновляется каждый день. ' +
         'У каждого фильма — официальный трейлер и ссылки, где его посмотреть легально. «Бесплатно» — фильмы в общественном достоянии (archive.org).</p>';
     }
@@ -624,7 +629,7 @@
     var h = '<div class="film"><div class="film-p"><img src="' + esc(m.p.replace('/300x450bb', '/600x900bb')) + '" alt="" onerror="this.src=\'' + esc(m.p) + '\'"></div>' +
       '<div class="film-i"><h2>' + esc(m.t) + '</h2>' + (m.to ? '<div class="film-o">' + esc(m.to) + '</div>' : '') +
       '<div class="film-f">' + esc(facts) + '</div>' + (m.dir ? '<div class="film-f">Режиссёр: ' + esc(m.dir) + '</div>' : '') +
-      '<div class="tools">' + (m.tr ? '<button class="btn primary" data-a="trailer" data-x="' + esc(m.id) + '">▶ Трейлер</button>' : '') +
+      '<div class="tools"><span id="film-free"></span>' + (m.tr ? '<button class="btn primary" data-a="trailer" data-x="' + esc(m.id) + '">▶ Трейлер</button>' : '') +
       '<button class="btn" data-a="mvfav" data-x="' + esc(m.id) + '">' + (TV.fav.has({ k: 'mv', id: m.id }) ? '★ В избранном' : '☆ В избранное') + '</button></div>' +
       filmDesc(m) +
       '<h3>Где смотреть</h3><div class="tools">';
@@ -632,7 +637,19 @@
     h += '</div><p class="note">BridgeTV показывает только официальный трейлер. Сам фильм — в онлайн-кинотеатрах (обычно по подписке или покупке).</p></div></div>';
     var like = TV.filter(TV.movies.find({ genre: m.g }), function (x) { return x.id !== m.id; });
     if (like.length) h += shelf('Похожие — ' + (TV.movies.genreName(m.g) || 'фильмы'), TV.movies.items(like, 20), 'mv-like-' + m.id);
-    return { title: m.t, html: h };
+    // Старый фильм может быть в общественном достоянии — тогда его можно смотреть целиком, бесплатно и законно
+    var after = function () {
+      TV.arch.findFilm(m.to || m.t, m.y, function (err, it) {
+        var box = document.getElementById('film-free');
+        if (!it || !box || top().s !== 'film' || top().id !== m.id) return;
+        reg('film-free', [it]);
+        box.innerHTML = '<button class="btn primary" data-a="play" data-l="film-free" data-i="0">▶ Смотреть фильм бесплатно</button>';
+        var note = document.createElement('p'); note.className = 'film-src';
+        note.textContent = 'Фильм в общественном достоянии — архив archive.org, законно и бесплатно.';
+        box.parentNode.parentNode.insertBefore(note, box.parentNode.nextSibling);
+      });
+    };
+    return { title: m.t, html: h, after: after };
   };
 
   /* Загрузки на устройство (только в приложении) */
@@ -653,10 +670,14 @@
   };
 
   function loadArchShelves() {
-    // Полки «Бесплатно» — фильмы в общественном достоянии (archive.org). YouTube сюда не подмешивается.
+    // «Можно смотреть бесплатно»: официальные каналы киностудий (полные фильмы от правообладателей)
+    // и общественное достояние (archive.org). Обычные видео YouTube сюда не подмешиваются.
     var jobs = [];
+    var studio = TV.find(TV.yt.feeds, function (f) { return f.id === 'classic'; });
+    if (studio && ytFeedsOk() && !TV.settings.kids) jobs.push({ ph: 'fdsh-classic', key: 'fd:classic', title: '🎞 Мосфильм и Беларусьфильм — официальные каналы', l: 'fdl-classic',
+      load: function (cb) { TV.yt.feed(studio, cb); } });
     TV.each(archList(), function (s) {
-      jobs.push({ ph: 'arsh-' + s.id, key: 'ar:' + s.id, title: '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — бесплатно', l: 'arl-' + s.id, more: s.id,
+      jobs.push({ ph: 'arsh-' + s.id, key: 'ar:' + s.id, title: '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние', l: 'arl-' + s.id, more: s.id,
         load: function (cb) { TV.arch.query(s.q, 40, cb); } });
     });
     var i = 0;

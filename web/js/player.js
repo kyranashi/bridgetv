@@ -221,7 +221,7 @@
     }, 30000);
     renderUi();
   }
-  function embedOrigins() { return [location.origin, TV.PAGES.replace(/^(https:\/\/[^\/]+).*/, '$1')]; }
+  function embedOrigins() { return [location.origin, TV.PAGES.replace(/^(https:\/\/[^\/]+).*/, '$1')].concat(TV.PAGES_ORIGINS || []); }
   window.addEventListener('message', function (e) {
     var d = e.data;
     if (!d || d.bt !== 'yt' || !state || !state.embed) return;

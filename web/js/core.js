@@ -15,6 +15,9 @@ TV.VERSION = '1.2.0';
 TV.REPO = 'kyranashi/bridgetv';
 /* Сайт проекта (GitHub Pages): страница встроенного плеера YouTube и веб-версия */
 TV.PAGES = 'https://kyranashi.github.io/bridgetv';
+/* Свой адрес сайта (docs/SITE.md): когда домен подключён, TV.PAGES = 'https://<домен>'. Старый адрес
+   GitHub Pages сам перенаправляет на новый, поэтому плееру YouTube доверяем обоим. */
+TV.PAGES_ORIGINS = ['https://kyranashi.github.io'];
 
 /* Нативная оболочка (iOS-приложение) сообщает о себе через window.TV_NATIVE */
 /* Android-оболочка (android/, с 0.2.5): мост window.TVAndroid — данные о приложении и сохранённое

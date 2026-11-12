@@ -91,6 +91,7 @@ python tools/serve.py --media "D:\Фильмы"
 | [docs/CATALOG.md](docs/CATALOG.md) | Каталог каналов: сборка, проверка ссылок, формат, ручные источники |
 | [docs/PLATFORMS.md](docs/PLATFORMS.md) | Матрица совместимости устройств и планы по платформам |
 | [docs/DESKTOP.md](docs/DESKTOP.md) | Программа для ПК (Electron), веб-приложение (PWA), страница установки |
+| [docs/SITE.md](docs/SITE.md) | Сайт для скачивания, свой адрес (домен), безопасность сайта |
 | [docs/YOUTUBE.md](docs/YOUTUBE.md) | Видео YouTube: режимы, ключ API, подборки, ошибки |
 | [docs/AUDIT.md](docs/AUDIT.md) | Предварительный аудит: законы рынков, магазины, безопасность, риски, план |
 | [docs/PRIVACY.md](docs/PRIVACY.md) | Политика конфиденциальности |

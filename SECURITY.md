@@ -10,7 +10,7 @@
 
 ## Как проверить, что файл настоящий
 
-1. Скачивайте только из Releases этого репозитория или со страницы https://kyranashi.github.io/bridgetv/web/install.html.
+1. Скачивайте только с сайта https://kyranashi.github.io/bridgetv/ или из Releases этого репозитория.
 2. Сверьте контрольную сумму с `SHA256SUMS.txt` из того же релиза:
    - Windows: `certutil -hashfile BridgeTV-windows-setup.exe SHA256`
    - macOS / Linux: `sha256sum -c SHA256SUMS.txt --ignore-missing`
@@ -24,7 +24,8 @@
 | Приложение | Content Security Policy (скрипты только свои, без `eval`); мосты iOS/Android/ПК принимают только известные команды и только адреса http/https; лимиты размеров; проверка структуры скачанного каталога; главная страница не уходит на чужие сайты; сообщения встроенного плеера проверяются по origin |
 | Android | отладка WebView выключена, геолокация и сохранение форм выключены, ключ подписи не хранится в репозитории |
 | ПК (Electron) | песочница, без Node.js в странице, Electron Fuses, запрет разрешений и навигации |
-| Сборки | действия GitHub закреплены по хэшам коммитов, минимальные права токена, токен не сохраняется в checkout, Dependabot, CodeQL, attestation и SHA256SUMS у релизов |
+| Сборки | действия GitHub закреплены по хэшам коммитов, минимальные права токена, токен не сохраняется в checkout, Dependabot, CodeQL, gitleaks (утёкшие ключи во всей истории), точные версии библиотек ПК (`npm ci` по `package-lock.json`), attestation и SHA256SUMS у релизов |
+| Сайт | статический, без форм, cookies и чужих скриптов; CSP, HTTPS + HSTS, защита от встраивания, ссылки только на релизы проекта ([docs/SITE.md](docs/SITE.md)) |
 | Данные | приложение не собирает персональные данные и не имеет своего сервера; всё хранится на устройстве ([docs/PRIVACY.md](docs/PRIVACY.md)) |
 
 Подробный разбор, остаточные риски и план — [docs/AUDIT.md](docs/AUDIT.md).

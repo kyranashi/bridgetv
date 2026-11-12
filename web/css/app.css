@@ -406,3 +406,6 @@ html:not(.touch) .filters.arrows .chips { -webkit-flex: 1; flex: 1; min-width: 0
 [data-shelf] { cursor: grab; }
 
 .film-src { color: #8a94a6; font-size: 13px; margin-top: -4px; }
+.free-h { margin: 22px 0 4px; }
+.free-h h2 { font-size: 20px; margin: 0 0 2px; }
+.free-h .note { margin: 0 0 6px; }
