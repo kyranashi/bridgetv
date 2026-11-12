@@ -309,7 +309,7 @@
     else if (key === 'live') TV.yt.search(q, { live: true }, done);
     else if (key === 'ytc') TV.yt.search(q, { type: 'channel' }, done);
     else if (key === 'film') TV.movies.load(function () {   // каталог фильмов (новые первыми) + общественное достояние
-      var cat = TV.movies.items(TV.movies.find({ q: q }), 40);
+      var cat = TV.movies.freeItems(TV.movies.free({ q: q }), 20).concat(TV.movies.items(TV.movies.find({ q: q }), 40));
       TV.arch.search(q, function (e, a) { done(null, cat.concat(e ? [] : a || [])); });
     });
   }
@@ -492,6 +492,11 @@
       h += placeholderBig();
       after = function () { TV.movies.load(function (err) { if (tab === 'movies' && stacks.movies.length === 1) { if (err) TV.toast('Каталог фильмов не загрузился: ' + err); else render(true); } }); };
     } else if (fmActive()) {
+      // Сначала — то, что можно смотреть бесплатно целиком (поиск по названию)
+      if (fm.q) {
+        var fq = TV.movies.free({ q: fm.q });
+        if (fq.length) h += '<div class="sec-h"><h3>▶ Смотреть бесплатно</h3><i>' + fq.length + '</i></div>' + grid(TV.movies.freeItems(fq), 'fm-free', 'vs');
+      }
       var found = TV.movies.find(fm);
       h += '<div class="sec-h"><h3>' + (fm.q ? 'Найдено' : 'Фильмы') + ' · новые первыми</h3><i>' + found.length + '</i></div>';
       h += found.length ? grid(TV.movies.items(found), 'fm-mv', 'ps') : empty('Ничего не найдено. Попробуйте другие фильтры или <button class="link" data-a="google">поиск в Google</button>.', '🎬');
@@ -509,7 +514,17 @@
       h += shelf('🆕 Новинки', TV.movies.items(fresh, 24), 'mv-new', 'fmsel', 'years:y0');
       // «Можно смотреть бесплатно» — полные фильмы, которые законно доступны: официальные каналы
       // киностудий (сами правообладатели, в плеере YouTube) и общественное достояние (archive.org)
-      h += '<div class="free-h"><h2>▶ Можно смотреть бесплатно</h2><p class="note">Полные фильмы целиком — законно: от самих киностудий и из архива общественного достояния.</p></div>';
+      h += '<div class="free-h"><h2>▶ Можно смотреть бесплатно</h2><p class="note">Полные фильмы и сериалы целиком — законно: их выложили сами студии и продюсеры (Star Media, «Мосфильм», «Марс Медиа», киностудия Горького, Госфильмофонд) в плеере Rutube, а также фильмы общественного достояния.</p></div>';
+      var fAll = TV.movies.free({}), fFilm = TV.movies.free({ kind: 'film' }), fSer = TV.movies.free({ kind: 'series' });
+      if (fAll.length) {
+        h += shelf('🆕 Новое бесплатно', TV.movies.freeItems(fAll, 24), 'fr-new', 'go', 'movies/freelist:all');
+        if (fFilm.length) h += shelf('🎬 Фильмы целиком', TV.movies.freeItems(fFilm, 24), 'fr-film', 'go', 'movies/freelist:film');
+        if (fSer.length) h += shelf('📺 Сериалы целиком', TV.movies.freeItems(fSer, 24), 'fr-ser', 'go', 'movies/freelist:series');
+        TV.each(TV.movies.studios(), function (st) {
+          var l = TV.movies.free({ studio: st });
+          if (l.length >= 6) h += shelf('🎞 ' + st, TV.movies.freeItems(l, 20), 'fr-st-' + st, 'go', 'movies/freelist:st-' + st);
+        });
+      }
       if (ytFeedsOk() && !TV.settings.kids) h += placeholder('fdsh-classic', '🎞 Мосфильм и Беларусьфильм — официальные каналы');
       TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние'); });
       h += '<div class="free-h"><h2>🎬 Каталог по жанрам</h2><p class="note">Описание, официальный трейлер и где посмотреть.</p></div>';
@@ -611,6 +626,18 @@
     return { title: title, html: h };
   };
 
+  /* Все бесплатные фильмы/сериалы правообладателей: p.id = all | film | series | st-<студия>; новые первыми */
+  S.freelist = function (p) {
+    var id = p.id || 'all', f = {}, title = '🆕 Новое бесплатно';
+    if (id === 'film') { f.kind = 'film'; title = '🎬 Фильмы целиком'; }
+    else if (id === 'series') { f.kind = 'series'; title = '📺 Сериалы целиком'; }
+    else if (id.indexOf('st-') === 0) { f.studio = id.slice(3); title = '🎞 ' + f.studio; }
+    if (!TV.movies.ready()) return { title: title, html: placeholderBig(), after: function () { TV.movies.load(function () { if (top().s === 'freelist') render(true); }); } };
+    var l = TV.movies.free(f);
+    return { title: title, html: '<p class="note">' + l.length + ' — бесплатно и законно, от правообладателей; новые первыми. Плеер Rutube (с рекламой Rutube).</p>' +
+      (l.length ? grid(TV.movies.freeItems(l), 'frl-' + id, 'vs') : empty('Пока пусто.', '🎬')) };
+  };
+
   /* Описание фильма: по-русски — начало статьи Википедии (с указанием источника, CC BY-SA);
      если русской статьи нет — описание прокатчика (англ.) и кнопка «Перевести» (Google Переводчик в браузере) */
   function filmDesc(m) {
@@ -626,11 +653,12 @@
     var m = TV.movies.byId(p.id);
     if (!m && !TV.movies.ready()) return { title: 'Фильм', html: placeholderBig(), after: function () { TV.movies.load(function () { if (top().s === 'film') render(true); }); } };
     if (!m) return { title: 'Фильм', html: empty('Фильм не найден — каталог обновился.', '🎬') };
+    if (m.rt && TV.movies.freeById(m.rt)) reg('film-rt', [TV.movies.freeItem(TV.movies.freeById(m.rt))]);
     var facts = [m.y, TV.movies.genreName(m.g), m.min ? m.min + ' мин' : '', m.r].filter(function (x) { return !!x; }).join(' · ');
     var h = '<div class="film"><div class="film-p"><img src="' + esc(m.p.replace('/300x450bb', '/600x900bb')) + '" alt="" onerror="this.src=\'' + esc(m.p) + '\'"></div>' +
       '<div class="film-i"><h2>' + esc(m.t) + '</h2>' + (m.to ? '<div class="film-o">' + esc(m.to) + '</div>' : '') +
       '<div class="film-f">' + esc(facts) + '</div>' + (m.dir ? '<div class="film-f">Режиссёр: ' + esc(m.dir) + '</div>' : '') +
-      '<div class="tools"><span id="film-free"></span>' + (m.tr ? '<button class="btn primary" data-a="trailer" data-x="' + esc(m.id) + '">▶ Трейлер</button>' : '') +
+      '<div class="tools"><span id="film-free">' + (m.rt && TV.movies.freeById(m.rt) ? '<button class="btn primary" data-a="play" data-l="film-rt" data-i="0">▶ Смотреть фильм бесплатно</button>' : '') + '</span>' + (m.tr ? '<button class="btn primary" data-a="trailer" data-x="' + esc(m.id) + '">▶ Трейлер</button>' : '') +
       '<button class="btn" data-a="mvfav" data-x="' + esc(m.id) + '">' + (TV.fav.has({ k: 'mv', id: m.id }) ? '★ В избранном' : '☆ В избранное') + '</button></div>' +
       filmDesc(m) +
       '<h3>Где смотреть</h3><div class="tools">';

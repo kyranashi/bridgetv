@@ -37,7 +37,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 // Политика содержимого для страниц приложения: скрипты только свои, без eval
 const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
-  "img-src * data: blob:; media-src * data: blob:; connect-src *; frame-src https://kyranashi.github.io https://www.youtube-nocookie.com https://www.youtube.com; " +
+  "img-src * data: blob:; media-src * data: blob:; connect-src *; frame-src https://kyranashi.github.io https://rutube.ru https://www.youtube-nocookie.com https://www.youtube.com; " +
   "worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'";
 
 /** Безопасно сопоставить путь запроса с файлом внутри base (без ../) */

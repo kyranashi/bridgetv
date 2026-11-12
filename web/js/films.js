@@ -100,7 +100,7 @@
   /* data/movies.json собирает tools/build_movies.py (каталог Apple + русские названия из Wikidata)
      раз в день и публикует на GitHub Pages. Только фильмы, новые первыми. Сами фильмы не
      показываются — официальный трейлер и ссылки «Где смотреть». Держим в памяти. */
-  var MV = null, mvT = 0, mvBusy = false, mvWait = [];
+  var MV = null, FREE = [], mvT = 0, mvBusy = false, mvWait = [];
   var M = TV.movies = {};
   M.genres = [
     { id: 'all', name: 'Все жанры' }, { id: 'action', name: 'Боевики' }, { id: 'comedy', name: 'Комедии' },
@@ -138,6 +138,11 @@
             ok.push(m);
           }
         });
+        var fr = [], img = /^https:\/\/[^\s"'<>]+$/;
+        TV.each(TV.isArray(j.free) ? j.free : [], function (v) {      // бесплатно у правообладателей (Rutube)
+          if (v && /^[0-9a-f]{32}$/.test(v.id || '') && typeof v.t === 'string' && (!v.img || img.test(v.img))) fr.push(v);
+        });
+        FREE = fr;
         MV = ok; mvT = TV.now();
         done(null);
       });
@@ -157,6 +162,26 @@
       return true;
     });
   };
+  /* Бесплатно у правообладателей (1.3.0): f: { q, kind: 'all'|'film'|'series', studio } — новые первыми.
+     Детский режим — только с возрастной маркой до 6+. */
+  M.free = function (f) {
+    f = f || {};
+    var q = TV.norm(f.q || '');
+    return TV.filter(FREE, function (v) {
+      if (TV.settings.kids && (v.age || 0) > 6) return false;
+      if (f.kind === 'film' && v.ser) return false;
+      if (f.kind === 'series' && !v.ser) return false;
+      if (f.studio && v.a !== f.studio) return false;
+      if (q && TV.norm(v.t + ' ' + (v.full || '') + ' ' + v.a).indexOf(q) < 0) return false;
+      return true;
+    });
+  };
+  M.studios = function () { var s = [], seen = {}; TV.each(FREE, function (v) { if (!seen[v.a]) { seen[v.a] = 1; s.push(v.a); } }); return s; };
+  M.freeItem = function (v) {
+    return { k: 'rt', id: v.id, n: v.t, sub: v.a + ' · ' + (v.ser ? 'сериал, ' : '') + v.min + ' мин' + (v.age ? ' · ' + v.age + '+' : ''), img: v.img, len: v.min * 60 };
+  };
+  M.freeItems = function (list, max) { var out = []; for (var i = 0; i < list.length && (!max || i < max); i++) out.push(M.freeItem(list[i])); return out; };
+  M.freeById = function (id) { return TV.find(FREE, function (v) { return v.id === id; }); };
   M.byId = function (id) { return TV.find(MV || [], function (m) { return m.id === id; }); };
   /* Карточка для сеток приложения */
   M.item = function (m) { return { k: 'mv', id: m.id, n: m.t, sub: m.y + (M.genreName(m.g) ? ' · ' + M.genreName(m.g) : ''), img: m.p }; };

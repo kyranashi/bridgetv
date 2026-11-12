@@ -7,7 +7,7 @@
  *   • чужие адреса (видео, API, картинки) не кэшируются и не трогаются.
  * Старые браузеры (iOS 9–11) service worker не знают — для них всё работает как обычный сайт.
  */
-var CACHE = 'bridgetv-1.2.0';
+var CACHE = 'bridgetv-1.3.0';
 var SHELL = ['index.html', 'install.html', 'yt.html', 'css/app.css', 'js/core.js', 'js/data.js', 'js/services.js', 'js/scan.js',
   'js/films.js', 'js/player.js', 'js/nav.js', 'js/app.js', 'vendor/hls.min.js', 'manifest.json',
   'img/icon-192.png', 'img/icon-512.png', 'img/icon-152.png', '../data/catalog.js'];

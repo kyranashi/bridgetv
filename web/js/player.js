@@ -158,6 +158,10 @@
       state.ch = null;
       setTitle(it.n, it.sub || '');
       playEmbed(it);
+    } else if (it.k === 'rt') {
+      state.ch = null;
+      setTitle(it.n, it.sub || '');
+      playRutube(it);
     } else {
       state.ch = null;
       setTitle(it.n, it.sub || '');
@@ -219,6 +223,30 @@
     embedT = setTimeout(function () {
       if (state && state.embed && !state.started) showError('Плеер YouTube не ответил. Проверьте интернет или откройте видео на YouTube.', true);
     }, 30000);
+    renderUi();
+  }
+  /* Фильмы и сериалы от правообладателей на Rutube (1.3.0): официальный встраиваемый плеер Rutube
+     (с его рекламой). id — только 32 шестнадцатеричных символа. */
+  function playRutube(it) {
+    stop();
+    if (!/^[0-9a-f]{32}$/.test(it.id || '')) { showError('Неверная ссылка на видео.', false); return; }
+    if (TV.device.ios && TV.device.iosVer && TV.device.iosVer < 12) {
+      showError('Плеер Rutube не работает на этой версии iOS. Откройте фильм в браузере или на другом устройстве.', false);
+      return;
+    }
+    state.embed = true; state.live = false; state.rt = true;
+    busy(true, 'Загрузка плеера Rutube…');
+    var f = document.createElement('iframe');
+    f.className = 'p-embed';
+    f.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture; clipboard-write');
+    f.setAttribute('allowfullscreen', '');
+    f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    f.onload = function () { if (state && state.rt) { busy(false); state.started = true; scheduleHide(); } };
+    // медленная сеть (VPN, старый роутер): не держать значок загрузки над кнопкой воспроизведения Rutube
+    setTimeout(function () { if (state && state.rt && !state.started) { busy(false); state.started = true; } }, 12000);
+    f.src = 'https://rutube.ru/play/embed/' + it.id + '/';
+    el.insertBefore(f, video.nextSibling);
+    TV.history.add(it);
     renderUi();
   }
   function embedOrigins() { return [location.origin, TV.PAGES.replace(/^(https:\/\/[^\/]+).*/, '$1')].concat(TV.PAGES_ORIGINS || []); }
@@ -454,7 +482,7 @@
   function stop() {
     stopEmbed();
     cancelNext();
-    if (state) state.embed = false;
+    if (state) { state.embed = false; state.rt = false; }
     clearTimeout(srcT); clearInterval(posT);
     if (hls) { try { hls.destroy(); } catch (e) {} hls = null; }
     try { video.pause(); video.removeAttribute('src'); video.load(); } catch (e) {}
@@ -648,6 +676,7 @@
     if (state && state.items.length > 1) acts.push(['next', 'Следующий ▶']);
     if (state && state.ch) acts.push(['report', 'Скрыть канал']);
     if (state && cur() && cur().k === 'yt') acts.push(['web', 'Открыть на YouTube']);
+    if (state && cur() && cur().k === 'rt') acts.push(['rtweb', 'Открыть на Rutube']);
     acts.push(['close', 'Назад']);
     var hint = '';
     if (TV.device.oldTls) hint = '\nСтарая iOS: если не открывается почти ничего — установите сертификаты (Ещё → Помощь).';
@@ -781,6 +810,7 @@
     else if (a === 'src') { if (state.variants.length > 1) { state.vi = (state.vi + 1) % state.variants.length; tryVariant(); } }
     else if (a === 'report') { TV.each(state.ch.v, function (v) { TV.health.mark(v.u, false); }); TV.emit('health'); TV.toast('Канал перенесён в «Не работают»'); P.step(1); }
     else if (a === 'web') { TV.yt.openSite(TV.yt.webUrl(cur().id)); }
+    else if (a === 'rtweb') { if (/^[0-9a-f]{32}$/.test(cur().id)) TV.openExternal('https://rutube.ru/video/' + cur().id + '/'); }
     else if (a === 'fav') {
       var it = state.ch ? { k: 'ch', id: state.ch.id, n: state.ch.n, img: state.ch.l } : cur();
       TV.toast(TV.fav.toggle(it) ? '★ Добавлено в избранное' : 'Убрано из избранного');

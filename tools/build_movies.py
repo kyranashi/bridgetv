@@ -152,6 +152,64 @@ def wiki_ru_intro(titles):
     return out
 
 
+# ------------------------------------------------------------------ бесплатно у правообладателей (1.3.0)
+# Rutube: полные фильмы и сериалы, которые САМИ правообладатели (студии, продюсеры, телеканалы со своими
+# фильмами) выложили бесплатно, с рекламой Rutube. Только каналы из этого списка: пометка Rutube
+# «официальный канал» означает лишь подтверждённый канал, а не права на фильм (встречались чужие фильмы
+# на подтверждённых каналах). Чужие загрузки (пиратские копии) не берутся. Показ — встроенным плеером Rutube.
+RT_CHANNELS = {
+    141565: "Star Media",                 # продюсерская компания — свои фильмы и сериалы
+    25963146: "Мосфильм",                 # киноконцерн — свои фильмы
+    29207414: "Марс Медиа",               # продюсерская компания («Т-34» и др.)
+    23635314: "Госфильмофонд России",     # государственный фильмофонд
+    48160110: "Киностудия Горького",      # киностудия — свои фильмы
+    # Телеканалы (Первый, Россия 1, НТВ, Звезда) не берём: на их каналах в основном выпуски передач,
+    # ток-шоу и эфиры, а не фильмы.
+}
+NOT_FILM = re.compile(r"выпуск|эфир|новост|ток-шоу|программ|интервью|трансляци|концерт|обзор", re.I)
+RT_PAGES = 8          # до 160 последних видео с канала
+RT_MIN_SEC = 50 * 60  # полнометражное: от 50 минут
+
+
+def rt_clean(title):
+    """«Т-34. Военный фильм. Смотреть онлайн в хорошем качестве» -> «Т-34»"""
+    t = re.split(r"\.\s*(Смотреть|Все серии|Фильм|Мелодрама|Детектив|Драма|Комедия|Военный|Боевик|Триллер|Сериал)\b", title or "", 1)[0]
+    t = re.split(r"\s+[|(]\s*", t, 1)[0]
+    return re.sub(r"\s+", " ", t).strip(" .-|")[:120] or (title or "")[:120]
+
+
+def rutube_free():
+    out, seen = [], set()
+    for cid, cname in RT_CHANNELS.items():
+        n = 0
+        for page in range(1, RT_PAGES + 1):
+            j = get("https://rutube.ru/api/video/person/%d/?format=json&page=%d" % (cid, page))
+            if not j:
+                break
+            for v in j.get("results") or []:
+                if v.get("id") in seen or v.get("is_paid") or v.get("is_adult") or v.get("is_livestream") or v.get("is_hidden") \
+                        or v.get("is_deleted") or v.get("is_locked") or (v.get("duration") or 0) < RT_MIN_SEC:
+                    continue
+                if not re.match(r"^[0-9a-f]{32}$", v.get("id") or ""):
+                    continue
+                seen.add(v["id"])
+                title = v.get("title") or ""
+                if NOT_FILM.search(title):
+                    continue
+                ser = bool(re.search(r"сери[ия]|сезон", title, re.I))
+                age = ((v.get("pg_rating") or {}).get("age")) or 0
+                out.append({"id": v["id"], "t": rt_clean(title), "full": title[:200], "a": cname, "ser": ser, "age": int(age),
+                            "min": int((v.get("duration") or 0) / 60), "date": (v.get("publication_ts") or v.get("created_ts") or "")[:10],
+                            "img": v.get("thumbnail_url") or "", "d": re.sub(r"\s+", " ", v.get("description") or "")[:300]})
+                n += 1
+            if not j.get("has_next"):
+                break
+            time.sleep(0.5)
+        print("Rutube «%s»: %d" % (cname, n))
+    out.sort(key=lambda v: v["date"], reverse=True)
+    return out
+
+
 def main():
     ids, ru_title = [], {}
     for g, _ in GENRES:
@@ -196,8 +254,21 @@ def main():
     movies.sort(key=lambda m: m["date"], reverse=True)
     if len(movies) < 50:
         sys.exit("Фильмов слишком мало (%d) — источник изменился?" % len(movies))
+    free = rutube_free()
+    # Фильм каталога, который правообладатель выложил бесплатно, — кнопка «Смотреть» на странице фильма
+    # совпадение — по названию И году в полном заголовке видео (одинаковые названия у разных фильмов — часто)
+    by_title = {}
+    for v in free:
+        by_title.setdefault(norm(v["t"]), []).append(v)
+    for m in movies:
+        for v in by_title.get(norm(m["t"]), []):
+            if str(m["y"]) in v["full"]:
+                m["rt"] = v["id"]
+                break
     with io.open(OUT, "w", encoding="utf-8", newline="\n") as f:
-        json.dump({"built": int(now), "src": "Apple iTunes, Wikidata", "movies": movies}, f, ensure_ascii=False, separators=(",", ":"))
+        json.dump({"built": int(now), "src": "Apple iTunes, Wikidata, Rutube (каналы правообладателей)", "movies": movies, "free": free},
+                  f, ensure_ascii=False, separators=(",", ":"))
+    print("Бесплатно у правообладателей (Rutube): %d, совпало с каталогом: %d" % (len(free), sum(1 for m in movies if m.get("rt"))))
     ru = sum(1 for m in movies if re.search("[а-яА-Я]", m["t"]))
     print("С русским описанием: %d" % sum(1 for m in movies if m["dr"]))
     print("Фильмов: %d (с русским названием %d, с трейлером %d), %d КБ" % (
