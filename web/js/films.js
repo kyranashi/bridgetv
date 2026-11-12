@@ -133,7 +133,10 @@
         if (err || !j || !TV.isArray(j.movies)) return next(err || 'формат');
         var ok = [], web = /^https:\/\/[^\s"'<>]+$/;
         TV.each(j.movies, function (m) {           // берём только корректные записи (защита от подмены)
-          if (m && typeof m.id === 'string' && typeof m.t === 'string' && web.test(m.p || '') && (!m.tr || web.test(m.tr)) && (!m.url || web.test(m.url))) ok.push(m);
+          if (m && typeof m.id === 'string' && typeof m.t === 'string' && web.test(m.p || '') && (!m.tr || web.test(m.tr)) && (!m.url || web.test(m.url))) {
+            if (typeof m.dr !== 'string' || typeof m.wa !== 'string' || !m.wa) { m.dr = ''; m.wa = ''; }
+            ok.push(m);
+          }
         });
         MV = ok; mvT = TV.now();
         done(null);

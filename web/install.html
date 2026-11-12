@@ -3,112 +3,12 @@
 <head>
 <meta charset="utf-8">
 <title>Установить BridgeTV</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="theme-color" content="#0a0d14">
-<link rel="icon" href="img/favicon-32.png">
-<link rel="apple-touch-icon" href="img/icon-152.png">
-<link rel="manifest" href="manifest.json">
-<style>
-  body { margin: 0; background: #0a0d14; color: #e8ecf3; font: 16px/1.5 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 26px; margin: 12px 0 4px; } h2 { font-size: 18px; margin: 28px 0 8px; }
-  .logo { width: 72px; height: 72px; border-radius: 18px; }
-  .sub { color: #9aa4b5; margin: 0 0 18px; }
-  .card { background: #141925; border: 1px solid #222a3a; border-radius: 16px; padding: 16px; margin: 12px 0; }
-  .card.me { border-color: #14b8a6; box-shadow: 0 0 0 1px #14b8a6 inset; }
-  .card h3 { margin: 0 0 6px; font-size: 17px; } .card p { margin: 6px 0; color: #c3cad6; }
-  .tag { display: inline-block; font-size: 12px; background: #14b8a6; color: #001; border-radius: 8px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
-  a.btn, button.btn { display: inline-block; margin: 6px 8px 0 0; padding: 10px 16px; border-radius: 12px; border: 0; cursor: pointer;
-    background: linear-gradient(135deg, #4f46e5, #14b8a6); color: #fff; text-decoration: none; font: inherit; font-weight: 600; }
-  a.btn.alt { background: #222a3a; }
-  small { color: #8892a3; } code { background: #222a3a; padding: 1px 5px; border-radius: 6px; }
-  #pwa { display: none; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<!-- С 1.2.0 страница установки — главная страница сайта. Эта страница оставлена, чтобы не ломались старые ссылки. -->
+<meta http-equiv="refresh" content="0; url=../#download">
 </head>
-<body>
-<div class="wrap">
-  <img class="logo" src="img/icon-152.png" alt="">
-  <h1>BridgeTV</h1>
-  <p class="sub">Телеканалы, видео и фильмы — одно приложение для телефона, планшета, компьютера и телевизора.
-    Выберите своё устройство (подходящее отмечено автоматически).</p>
-
-  <div class="card" id="pwa">
-    <h3>Установить прямо из браузера <span class="tag">быстро</span></h3>
-    <p>Приложение появится на рабочем столе / экране «Домой» и будет открываться отдельным окном.</p>
-    <button class="btn" id="pwaBtn">Установить</button>
-  </div>
-
-  <div class="card" data-os="windows">
-    <h3>Windows 10 / 11</h3>
-    <p>Программа для ПК. Установщик или переносная версия (запускается без установки, например с флешки).</p>
-    <a class="btn" data-dl="BridgeTV-windows-setup.exe">Скачать установщик</a>
-    <a class="btn alt" data-dl="BridgeTV-windows-portable.exe">Переносная версия</a>
-    <p><small>Программа пока без цифровой подписи: Windows может показать «Система Windows защитила ваш компьютер» → «Подробнее» → «Выполнить в любом случае».</small></p>
-  </div>
-
-  <div class="card" data-os="linux">
-    <h3>Linux</h3>
-    <p>Файл AppImage: скачать, разрешить запуск (<code>chmod +x BridgeTV-linux.AppImage</code>) и открыть.</p>
-    <a class="btn" data-dl="BridgeTV-linux.AppImage">Скачать AppImage</a>
-  </div>
-
-  <div class="card" data-os="mac">
-    <h3>macOS</h3>
-    <p>Откройте веб-версию в Safari → меню «Файл» → «Добавить в Dock» (macOS 14+). В Chrome — значок установки в адресной строке.</p>
-    <a class="btn" href="index.html">Открыть веб-версию</a>
-  </div>
-
-  <div class="card" data-os="android">
-    <h3>Android, Android TV <small>(4.4 и новее)</small></h3>
-    <p>Скачайте файл и откройте его. Если телефон спросит — разрешите установку из этого источника.</p>
-    <a class="btn" data-dl="BridgeTV.apk">Скачать BridgeTV.apk</a>
-  </div>
-
-  <div class="card" data-os="ios">
-    <h3>iPhone, iPad <small>(iOS 9 и новее)</small></h3>
-    <p><b>Без установки файлов:</b> откройте веб-версию в Safari → «Поделиться» → «На экран «Домой»». Работает на любой версии iOS.</p>
-    <a class="btn" href="index.html">Открыть веб-версию</a>
-    <p><b>Отдельное приложение (.ipa):</b> ставится через AltStore / Sideloadly / TrollStore или на устройство с джейлбрейком — подробнее в инструкции.</p>
-    <a class="btn alt" data-dl="BridgeTV.ipa">Скачать BridgeTV.ipa</a>
-  </div>
-
-  <div class="card" data-os="tv">
-    <h3>Smart TV</h3>
-    <p>Samsung (Tizen), LG (webOS) — пакеты в разделе релизов; установка через режим разработчика. Любой телевизор с браузером — просто откройте веб-версию.</p>
-    <a class="btn alt" id="rel">Все файлы релиза</a>
-  </div>
-
-  <h2>Безопасность</h2>
-  <p><small>Скачивайте BridgeTV только отсюда или со страницы проекта на GitHub. У каждого релиза есть файл <code>SHA256SUMS.txt</code>
-    с контрольными суммами и подтверждение сборки GitHub (attestation): файлы собраны автоматически из открытого исходного кода.</small></p>
-</div>
-<script>
-(function () {
-  var REPO = 'https://github.com/kyranashi/bridgetv/releases';
-  var ua = navigator.userAgent, os = 'windows';
-  if (/Tizen|Web0S|webOS|SmartTV|SMART-TV|BRAVIA|AFT|Android TV/i.test(ua)) os = 'tv';
-  else if (/Android/i.test(ua)) os = 'android';
-  else if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) os = 'ios';
-  else if (/Macintosh|Mac OS X/i.test(ua)) os = 'mac';
-  else if (/Linux|X11|CrOS/i.test(ua)) os = 'linux';
-  var cards = document.querySelectorAll('[data-os]'), first = null, i;
-  for (i = 0; i < cards.length; i++) if (cards[i].getAttribute('data-os') === os) { cards[i].className += ' me'; first = cards[i]; }
-  if (first) first.parentNode.insertBefore(first, document.getElementById('pwa').nextSibling);
-  var links = document.querySelectorAll('[data-dl]');
-  for (i = 0; i < links.length; i++) {
-    var dl = links[i].getAttribute('data-dl');
-    if (dl && /^[A-Za-z0-9._-]+$/.test(dl)) {
-      links[i].href = REPO + '/latest/download/' + encodeURIComponent(dl);
-    }
-  }
-  document.getElementById('rel').href = REPO + '/latest';
-  // Установка PWA (Chrome, Edge, Android, Samsung Internet)
-  var ev = null;
-  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); ev = e; document.getElementById('pwa').style.display = 'block'; });
-  document.getElementById('pwaBtn').onclick = function () { if (ev) { ev.prompt(); ev = null; document.getElementById('pwa').style.display = 'none'; } };
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
-})();
-</script>
+<body style="background:#0a0d14;color:#e8ecf3;font-family:sans-serif;padding:24px">
+<p><a href="../#download" style="color:#7dd3c8">Перейти на страницу скачивания BridgeTV</a></p>
 </body>
 </html>

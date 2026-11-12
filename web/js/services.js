@@ -131,7 +131,8 @@
       if (err) return cb(err);
       var out = [], re = /<entry>([\s\S]*?)<\/entry>/g, m;
       var tag = function (s, t) { var r = s.match(new RegExp('<' + t + '[^>]*>([^<]*)</' + t + '>')); return r ? r[1] : ''; };
-      var un = function (s) { return s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'); };
+      // &amp; — последним: иначе «&amp;lt;» раскодировалось бы дважды (до «<»). Результат всё равно выводится через TV.esc.
+      var un = function (s) { return s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'); };
       while ((m = re.exec(xml))) {
         var e = m[1], id = tag(e, 'yt:videoId');
         if (!id || /#shorts/i.test(e)) continue;

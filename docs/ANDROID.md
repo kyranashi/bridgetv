@@ -33,7 +33,10 @@ Android ставит обновление поверх, только если о
 - Ключ проекта создан 10.11.2026 и лежит **только у владельца**: `releases/android-signing/bridgetv-release.p12` и пароль в `PASSWORD.txt` (папка не попадает в git). **Сохраните копию** — без ключа обновления придётся ставить с удалением старой версии.
 - Чтобы CI подписывал этим ключом, добавьте два секрета репозитория (один раз, в PowerShell):
   ```powershell
-  [Convert]::ToBase64String([IO.File]::ReadAllBytes("releases\android-signing\bridgetv-release.p12")) | gh secret set ANDROID_KEYSTORE_B64 -R kyranashi/bridgetv
+  # сначала перейдите в папку проекта (PowerShell «от администратора» открывается в C:\Windows\system32,
+  # и относительный путь там не находится); Resolve-Path делает путь полным для .NET
+  cd "<папка проекта BridgeTV>"
+  [Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path "releases\android-signing\bridgetv-release.p12"))) | gh secret set ANDROID_KEYSTORE_B64 -R kyranashi/bridgetv
   gh secret set ANDROID_KS_PASS -R kyranashi/bridgetv     # вставить пароль из PASSWORD.txt
   ```
   или через сайт: Settings → Secrets and variables → Actions → New repository secret.

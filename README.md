@@ -1,5 +1,7 @@
 # 📺 BridgeTV
 
+### ⬇️ Скачать: **[kyranashi.github.io/bridgetv](https://kyranashi.github.io/bridgetv/)** — сайт сам определит ваше устройство
+
 **Мост между старой техникой и современным ТВ: телеканалы, видео и фильмы для любого устройства — от iPad mini 1 на iOS 9 до Smart TV и ПК.**
 Открытый код, без рекламы, без регистрации. Только бесплатные открытые источники.
 
@@ -7,8 +9,8 @@
 
 | | |
 |---|---|
-| Версия | **1.1.0** (11.11.2026) — см. [CHANGELOG.md](CHANGELOG.md) |
-| Платформы | iPad/iPhone iOS 9+ (приложение и Safari), Android 4.4+, Smart TV (Tizen, webOS, Android TV), Windows и Linux (программа), любой ПК (веб-приложение) — **[установить](https://kyranashi.github.io/bridgetv/web/install.html)** |
+| Версия | **1.2.0** (12.11.2026) — см. [CHANGELOG.md](CHANGELOG.md) |
+| Платформы | iPad/iPhone iOS 9+ (приложение и Safari), Android 4.4+, Smart TV (Tizen, webOS, Android TV), Windows и Linux (программа), любой ПК (веб-приложение) — **[установить](https://kyranashi.github.io/bridgetv/)** |
 | Каналы | 1856 каналов: 🇷🇺 Россия 440, 🇧🇾 Беларусь 29 — основные; ещё 16 стран, русскоязычные каналы мира и 6 подборок «Мир» — в «Дополнительно». Источники: iptv-org и Free-TV; каналы дополнительно проверяются на самом устройстве |
 | Лицензия | MIT ([LICENSE](LICENSE)) |
 
@@ -32,7 +34,7 @@
 
 ## Скачать
 
-Проще всего — **[страница установки](https://kyranashi.github.io/bridgetv/web/install.html)**: она сама определит устройство. Проверка подлинности файлов — [SECURITY.md](SECURITY.md).
+Проще всего — **[страница установки](https://kyranashi.github.io/bridgetv/)**: она сама определит устройство. Проверка подлинности файлов — [SECURITY.md](SECURITY.md).
 
 | Устройство | Файл (GitHub → [Releases](https://github.com/kyranashi/bridgetv/releases)) | Как поставить |
 |---|---|---|
@@ -104,7 +106,7 @@ python tools/serve.py --media "D:\Фильмы"
 BridgeTV/
 ├─ web/                 общий интерфейс для всех платформ (HTML/CSS/JS ES5, без фреймворков)
 │  ├─ index.html
-│  ├─ install.html      страница установки (сама определяет устройство)
+│  ├─ install.html      старый адрес страницы установки → перенаправляет на сайт
 │  ├─ yt.html           официальный плеер YouTube (IFrame API)
 │  ├─ sw.js, manifest.json  веб-приложение (PWA)
 │  ├─ css/app.css

@@ -38,7 +38,7 @@
 | Windows / macOS / Linux / ChromeOS | веб-приложение (PWA: «Установить» в браузере) или `web.zip` | ✅ | клавиатура как пульт; `web.zip` раздаёт приложение по Wi‑Fi |
 | Старые ТВ (Opera TV, NetCast) | браузер | ⚠️ частично | без MSE и без встроенного HLS видео не пойдёт |
 
-Все форматы — один и тот же интерфейс `web/`; различается только оболочка: `ios/` (WKWebView), `android/` (WebView), `desktop/` (Electron), PWA (`web/manifest.json`, `web/sw.js`), пакеты ТВ (`tools/package.py`). Страница установки `web/install.html` сама определяет устройство и предлагает нужный файл.
+Все форматы — один и тот же интерфейс `web/`; различается только оболочка: `ios/` (WKWebView), `android/` (WebView), `desktop/` (Electron), PWA (`web/manifest.json`, `web/sw.js`), пакеты ТВ (`tools/package.py`). Сайт https://kyranashi.github.io/bridgetv/ (корневой `index.html`) сам определяет устройство и предлагает нужный файл.
 
 С 0.3.0 приложение ещё и **подстраивается под устройство**: `TV.caps` (`web/js/core.js`) проверяет, какие кодеки и форматы видео поддерживаются (H.264, HEVC, VP9, AV1, HLS, WebM/MKV) и какое качество тянет экран; по этому выбирается источник видео YouTube ([YOUTUBE.md](YOUTUBE.md)), лёгкий режим и фильмы с ПК. Список возможностей — Настройки → «Ваше устройство».
 

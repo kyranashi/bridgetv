@@ -23,7 +23,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-static NSString *const kAppVersion = @"1.1.0";
+static NSString *const kAppVersion = @"1.2.0";
 
 // Совместимость с iOS 9: clang 11 под ARC вставляет вызов objc_unsafeClaimAutoreleasedReturnValue
 // (есть в libobjc только с iOS 10), когда результат метода отбрасывается — напр. у loadFileURL/reload.

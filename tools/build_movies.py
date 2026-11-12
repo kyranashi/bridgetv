@@ -97,19 +97,22 @@ def wikidata_ru(titles):
     for i in range(0, len(titles), 60):
         part = titles[i:i + 60]
         vals = " ".join('"%s"@en' % t.replace("\\", "").replace('"', "") for t in part)
-        q = """SELECT ?en ?ru ?d WHERE {
+        q = """SELECT ?en ?ru ?d ?art WHERE {
           VALUES ?en { %s }
           ?f rdfs:label ?en; wdt:P31 wd:Q11424.
           OPTIONAL { ?f wdt:P577 ?d }
           ?f rdfs:label ?ru FILTER(LANG(?ru) = "ru")
+          OPTIONAL { ?art schema:about ?f; schema:isPartOf <https://ru.wikipedia.org/> }
         }""" % vals
         j = get("https://query.wikidata.org/sparql?format=json&query=" + urllib.parse.quote(q))
         for b in ((j or {}).get("results") or {}).get("bindings") or []:
             try:
                 y = int(b["d"]["value"][:4]) if "d" in b else 0
-                out.setdefault((norm(b["en"]["value"]), y), b["ru"]["value"])
-                out.setdefault((norm(b["en"]["value"]), 0), b["ru"]["value"])
-            except (KeyError, ValueError):
+                art = urllib.parse.unquote(b["art"]["value"].split("/wiki/", 1)[1]).replace("_", " ") if "art" in b else ""
+                val = (b["ru"]["value"], art)
+                # год — обязательный признак совпадения; «без года» — только если в Wikidata даты нет
+                out.setdefault((norm(b["en"]["value"]), y), val)
+            except (KeyError, ValueError, IndexError):
                 pass
         time.sleep(1)
     print("Wikidata: русских названий %d" % len(out))
@@ -117,11 +120,36 @@ def wikidata_ru(titles):
 
 
 def ru_name(wd, en, y):
+    """(русское название, статья ру-Википедии) или (None, '')"""
     for yy in (y, y - 1, y + 1, 0):
         t = wd.get((norm(en), yy))
         if t:
             return t
-    return None
+    return (None, "")
+
+
+def wiki_ru_intro(titles):
+    """{статья: первые предложения статьи ру-Википедии} — русское описание фильма (CC BY-SA, с указанием источника)"""
+    out, titles = {}, sorted(set(t for t in titles if t))
+    for i in range(0, len(titles), 20):
+        part = titles[i:i + 20]
+        url = ("https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&exintro=1&explaintext=1"
+               "&exsentences=4&redirects=1&titles=" + urllib.parse.quote("|".join(part)))
+        j = get(url) or {}
+        q = j.get("query") or {}
+        back = {}
+        for r in q.get("redirects") or []:
+            back[r["to"]] = r["from"]
+        for r in q.get("normalized") or []:
+            back.setdefault(r["to"], r["from"])
+        for p in (q.get("pages") or {}).values():
+            txt = re.sub(r"\s+", " ", p.get("extract") or "").strip()
+            txt = re.sub(r"\s*\([^()]*(англ\.|англ |МФА)[^()]*\)", "", txt)    # убрать «(англ. …)» в начале статьи
+            if len(txt) > 40:
+                out[back.get(p.get("title"), p.get("title"))] = txt[:600]
+        time.sleep(0.5)
+    print("Википедия: русских описаний %d" % len(out))
+    return out
 
 
 def main():
@@ -140,6 +168,9 @@ def main():
     ru_details = lookup([i for i in ru_ids if i not in details], "ru")
     now = time.time()
     wd = wikidata_ru([re.sub(r"\s*\(\d{4}\)$", "", r.get("trackName") or "") for r in details.values() if r.get("trackName")])
+    arts = [ru_name(wd, re.sub(r"\s*\(\d{4}\)$", "", r.get("trackName") or ""), int((r.get("releaseDate") or "0000")[:4] or 0))[1]
+            for r in details.values()]
+    intro = wiki_ru_intro(arts)
     movies = []
     for mid, r in list(details.items()) + list(ru_details.items()):
         date = (r.get("releaseDate") or "")[:10]
@@ -150,10 +181,13 @@ def main():
         if g in SKIP_GENRES:
             continue
         en = r.get("trackName") or ""
-        t = ru_title.get(mid) or ru_name(wd, re.sub(r"\s*\(\d{4}\)$", "", en), y) or en
+        wt, art = ru_name(wd, re.sub(r"\s*\(\d{4}\)$", "", en), y)
+        t = ru_title.get(mid) or wt or en
         movies.append({
             "id": "it" + mid, "t": t[:120], "to": en[:120] if en != t else "", "y": y, "date": date, "g": g,
             "d": re.sub(r"\s+", " ", r.get("longDescription") or "")[:450],
+            # русское описание — начало статьи ру-Википедии (CC BY-SA 4.0), «wa» — название статьи для ссылки
+            "dr": intro.get(art, ""), "wa": art if intro.get(art) else "",
             "p": poster(r["artworkUrl100"], 300), "tr": r.get("previewUrl") or "",
             "r": r.get("contentAdvisoryRating") or "", "min": int(int(r.get("trackTimeMillis") or 0) / 60000),
             "dir": (r.get("artistName") or "")[:80], "url": (r.get("trackViewUrl") or "").split("?")[0],
@@ -165,6 +199,7 @@ def main():
     with io.open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump({"built": int(now), "src": "Apple iTunes, Wikidata", "movies": movies}, f, ensure_ascii=False, separators=(",", ":"))
     ru = sum(1 for m in movies if re.search("[а-яА-Я]", m["t"]))
+    print("С русским описанием: %d" % sum(1 for m in movies if m["dr"]))
     print("Фильмов: %d (с русским названием %d, с трейлером %d), %d КБ" % (
         len(movies), ru, sum(1 for m in movies if m["tr"]), os.path.getsize(OUT) // 1024))
 

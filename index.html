@@ -1,6 +1,179 @@
 <!DOCTYPE html>
-<html lang="ru"><head><meta charset="utf-8"><title>BridgeTV</title>
-<meta http-equiv="refresh" content="0; url=web/index.html">
-</head><body style="background:#0b0e14;color:#e8ecf3;font-family:sans-serif">
-<p><a href="web/index.html" style="color:#6aa5ff">Открыть BridgeTV</a></p>
-</body></html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>BridgeTV — телевизор, видео и фильмы на любом устройстве</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="BridgeTV — бесплатное приложение с открытым кодом: телеканалы России и Беларуси, программа передач, видео и каталог фильмов. Windows, Linux, Android, iPhone/iPad, Smart TV.">
+<!-- Безопасность сайта: только свои скрипты и картинки, без сторонних библиотек, шрифтов и счётчиков;
+     сайт нельзя встроить в чужую страницу скриптом (frame-busting ниже), ссылки на скачивание — только
+     на релизы репозитория kyranashi/bridgetv (список зашит в странице, не берётся из адреса). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#0a0d14">
+<link rel="icon" href="web/img/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="web/img/icon-152.png">
+<style>
+  :root { --bg: #0a0d14; --card: #131926; --line: #222a3a; --text: #e8ecf3; --muted: #9aa4b5; --a: #4f46e5; --b: #14b8a6; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  a { color: #7dd3c8; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 18px 0; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; color: var(--text); text-decoration: none; }
+  .brand img { width: 36px; height: 36px; border-radius: 9px; }
+  .hero { padding: 36px 0 28px; display: flex; gap: 32px; align-items: center; flex-wrap: wrap; }
+  .hero-t { flex: 1 1 420px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.1; margin: 0 0 14px; }
+  .hero h1 span { background: linear-gradient(135deg, var(--a), var(--b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--muted); font-size: 18px; margin: 0 0 22px; }
+  .hero-i { flex: 0 0 180px; margin: 0 auto; }
+  .hero-i img { width: 180px; height: 180px; border-radius: 40px; box-shadow: 0 20px 60px rgba(20,184,166,.25); }
+  .btn { display: inline-block; padding: 13px 22px; border-radius: 14px; text-decoration: none; font-weight: 700; color: #fff; background: #222a3a; margin: 0 10px 10px 0; border: 0; font-size: 16px; cursor: pointer; }
+  .btn.main { background: linear-gradient(135deg, var(--a), var(--b)); font-size: 18px; padding: 15px 26px; }
+  .btn small { display: block; font-weight: 400; font-size: 13px; opacity: .85; }
+  .hint { color: var(--muted); font-size: 14px; }
+  h2 { font-size: 26px; margin: 44px 0 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  .card.me { border-color: var(--b); box-shadow: 0 0 0 1px var(--b) inset; }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 6px 0 12px; color: #c3cad6; font-size: 15px; }
+  .card .btn { padding: 10px 16px; font-size: 15px; }
+  .tag { display: inline-block; font-size: 12px; background: var(--b); color: #001; border-radius: 8px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; font-weight: 700; }
+  .feat { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .feat div { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+  .feat b { display: block; margin-bottom: 4px; }
+  .feat span { color: var(--muted); font-size: 14px; }
+  code { background: #1d2430; padding: 2px 6px; border-radius: 6px; font-size: 14px; }
+  footer { margin: 56px 0 30px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 18px; }
+  footer a { margin-right: 14px; }
+  @media (max-width: 600px) { .hero { padding-top: 10px; } .hero-i { order: -1; flex-basis: 120px; } .hero-i img { width: 120px; height: 120px; border-radius: 28px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="./"><img src="web/img/icon-152.png" alt="">BridgeTV</a>
+    <a href="https://github.com/kyranashi/bridgetv" rel="noopener">Исходный код ↗</a>
+  </header>
+
+  <section class="hero">
+    <div class="hero-t">
+      <h1>Телевизор, видео и фильмы — <span>на любом устройстве</span></h1>
+      <p>Телеканалы России и Беларуси с программой передач, тренды YouTube, каталог фильмов с трейлерами. Бесплатно, без рекламы и регистрации, с открытым кодом. Работает даже на старом iPad.</p>
+      <div id="main-dl"></div>
+      <a class="btn" href="web/index.html">Открыть в браузере</a>
+      <p class="hint" id="detected"></p>
+    </div>
+    <div class="hero-i"><img src="web/img/icon-512.png" alt="Значок BridgeTV"></div>
+  </section>
+
+  <h2 id="download">Скачать</h2>
+  <div class="grid" id="cards">
+    <div class="card" data-os="windows">
+      <h3>Windows 10 / 11</h3>
+      <p>Программа для ПК: все каналы, программа передач, фильмы.</p>
+      <a class="btn" data-dl="BridgeTV-windows-setup.exe">Установщик</a>
+      <a class="btn" data-dl="BridgeTV-windows-portable.exe">Без установки</a>
+      <p class="hint">Пока без цифровой подписи: Windows может предупредить — «Подробнее» → «Выполнить в любом случае».</p>
+    </div>
+    <div class="card" data-os="android">
+      <h3>Android, Android TV</h3>
+      <p>Телефоны, планшеты, приставки и телевизоры, Android 4.4 и новее. Голосовой поиск с пульта.</p>
+      <a class="btn" data-dl="BridgeTV.apk">Скачать APK</a>
+      <p class="hint">Откройте файл; если спросит — разрешите установку из этого источника.</p>
+    </div>
+    <div class="card" data-os="ios">
+      <h3>iPhone, iPad</h3>
+      <p>Проще всего: «Открыть в браузере» → «Поделиться» → «На экран Домой». Работает на любой iOS, даже 9.</p>
+      <a class="btn" href="web/index.html">Открыть в Safari</a>
+      <a class="btn" data-dl="BridgeTV.ipa">Файл .ipa</a>
+      <p class="hint">.ipa — для AltStore, Sideloadly, TrollStore или устройства с джейлбрейком.</p>
+    </div>
+    <div class="card" data-os="linux">
+      <h3>Linux</h3>
+      <p>Один файл AppImage: скачать, разрешить запуск (<code>chmod +x</code>) и открыть.</p>
+      <a class="btn" data-dl="BridgeTV-linux.AppImage">Скачать AppImage</a>
+    </div>
+    <div class="card" data-os="mac">
+      <h3>macOS</h3>
+      <p>Откройте сайт в Safari → «Файл» → «Добавить в Dock» (macOS 14+) или установите из Chrome/Edge.</p>
+      <a class="btn" href="web/index.html">Открыть веб-версию</a>
+    </div>
+    <div class="card" data-os="tv">
+      <h3>Smart TV</h3>
+      <p>Samsung (Tizen) и LG (webOS) — пакеты в релизе; любой телевизор с браузером — веб-версия.</p>
+      <a class="btn" href="https://github.com/kyranashi/bridgetv/releases/latest" rel="noopener">Все файлы релиза</a>
+    </div>
+  </div>
+
+  <h2>Что внутри</h2>
+  <div class="feat">
+    <div><b>📺 Телеканалы</b><span>Россия и Беларусь — первыми, ещё 16 стран. Нерабочие прячутся сами.</span></div>
+    <div><b>📋 Программа передач</b><span>Что идёт сейчас и дальше, перемотка эфира назад.</span></div>
+    <div><b>🎬 Фильмы</b><span>Каталог с постерами, новые первыми, официальные трейлеры, где посмотреть легально.</span></div>
+    <div><b>▶️ Видео</b><span>Тренды YouTube в официальном плеере.</span></div>
+    <div><b>🧸 Детский режим</b><span>Только детские каналы и мультфильмы, выход по PIN.</span></div>
+    <div><b>🔒 Приватность</b><span>Ничего не собирает, без рекламы и аккаунтов.</span></div>
+  </div>
+
+  <h2>Как проверить, что файл настоящий</h2>
+  <div class="card">
+    <p>Скачивайте BridgeTV <b>только с этого сайта</b> или со страницы релизов <a href="https://github.com/kyranashi/bridgetv/releases" rel="noopener">github.com/kyranashi/bridgetv</a>. Все кнопки этой страницы ведут туда.</p>
+    <p>Каждый файл собирается автоматически из открытого кода на серверах GitHub. В релизе есть <code>SHA256SUMS.txt</code> — контрольные суммы. Сравните:</p>
+    <p>Windows: <code>certutil -hashfile BridgeTV.apk SHA256</code><br>macOS / Linux: <code>sha256sum BridgeTV.apk</code></p>
+    <p>Для продвинутых: <code>gh attestation verify &lt;файл&gt; -R kyranashi/bridgetv</code> — подтверждение, что файл собран GitHub из этого репозитория.</p>
+    <a class="btn" href="https://github.com/kyranashi/bridgetv/releases/latest" rel="noopener">Контрольные суммы последнего релиза</a>
+  </div>
+
+  <footer>
+    <a href="https://github.com/kyranashi/bridgetv" rel="noopener">GitHub</a>
+    <a href="https://github.com/kyranashi/bridgetv/blob/main/docs/PRIVACY.md" rel="noopener">Конфиденциальность</a>
+    <a href="https://github.com/kyranashi/bridgetv/blob/main/SECURITY.md" rel="noopener">Безопасность</a>
+    <a href="https://github.com/kyranashi/bridgetv/blob/main/docs/LEGAL.md" rel="noopener">Правовая информация</a>
+    <p>BridgeTV — открытый некоммерческий проект (лицензия MIT). Не связан с YouTube, Google, Apple и вещателями.
+      Показывает только бесплатные открытые трансляции и официальные трейлеры.</p>
+  </footer>
+</div>
+<script>
+(function () {
+  // Страницу нельзя показывать внутри чужого сайта (защита от подмены кнопок — clickjacking).
+  // GitHub Pages не даёт задать заголовок X-Frame-Options, поэтому — так.
+  if (window.top !== window.self) { try { window.top.location = window.self.location.href; } catch (e) { document.body.innerHTML = ''; } return; }
+
+  var REL = 'https://github.com/kyranashi/bridgetv/releases/latest/download/';
+  // Разрешённые файлы — только эти имена (адрес собирается из этого списка, а не из страницы)
+  var FILES = { 'BridgeTV-windows-setup.exe': 1, 'BridgeTV-windows-portable.exe': 1, 'BridgeTV.apk': 1, 'BridgeTV.ipa': 1, 'BridgeTV-linux.AppImage': 1 };
+  var links = document.querySelectorAll('[data-dl]'), i;
+  for (i = 0; i < links.length; i++) {
+    var f = links[i].getAttribute('data-dl');
+    if (FILES[f] === 1) { links[i].href = REL + f; links[i].setAttribute('rel', 'noopener'); }
+    else links[i].removeAttribute('href');
+  }
+
+  var ua = navigator.userAgent, os = 'windows', name = 'Windows';
+  if (/Tizen|Web0S|webOS|SmartTV|SMART-TV|BRAVIA|AFT|Android TV/i.test(ua)) { os = 'tv'; name = 'Smart TV'; }
+  else if (/Android/i.test(ua)) { os = 'android'; name = 'Android'; }
+  else if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) { os = 'ios'; name = 'iPhone / iPad'; }
+  else if (/Macintosh|Mac OS X/i.test(ua)) { os = 'mac'; name = 'macOS'; }
+  else if (/Linux|X11|CrOS/i.test(ua)) { os = 'linux'; name = 'Linux'; }
+
+  var cards = document.querySelectorAll('[data-os]'), mine = null;
+  for (i = 0; i < cards.length; i++) if (cards[i].getAttribute('data-os') === os) { cards[i].className += ' me'; mine = cards[i]; }
+  if (mine) mine.parentNode.insertBefore(mine, mine.parentNode.firstChild);
+
+  // Главная кнопка — под ваше устройство (текст задаётся через textContent, без HTML)
+  var MAIN = { windows: ['BridgeTV-windows-setup.exe', 'Скачать для Windows', 'установщик, ~110 МБ'], android: ['BridgeTV.apk', 'Скачать для Android', 'APK, ~3 МБ'],
+    linux: ['BridgeTV-linux.AppImage', 'Скачать для Linux', 'AppImage, ~100 МБ'] };
+  var box = document.getElementById('main-dl'), m = MAIN[os];
+  var a = document.createElement('a'); a.className = 'btn main';
+  if (m) { a.href = REL + m[0]; a.setAttribute('rel', 'noopener'); a.appendChild(document.createTextNode(m[1])); var s = document.createElement('small'); s.textContent = m[2]; a.appendChild(s); }
+  else { a.href = 'web/index.html'; a.appendChild(document.createTextNode(os === 'ios' ? 'Открыть на iPhone / iPad' : 'Открыть BridgeTV')); }
+  box.appendChild(a);
+  document.getElementById('detected').textContent = 'Ваше устройство: ' + name + '. Другие варианты — ниже.';
+})();
+</script>
+</body>
+</html>

@@ -396,11 +396,13 @@ textarea.code { width: 100%; min-height: 110px; background: #0f141f; color: #e8e
 .chips.wrap.big .chip { margin: 0 8px 10px 0; padding: 10px 16px; font-size: 15px; }
 .fpick { margin-top: 18px; }
 .sh-nav { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
-.rarr { display: none; width: 32px; height: 32px; border-radius: 50%; border: 0; background: #1d2430; color: #e8ecf3; font-size: 20px; line-height: 30px; margin-left: 6px; cursor: pointer; padding: 0; }
+.rarr { display: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #2a3346; background: #161c28; color: #e8ecf3; font: 600 22px/1 Arial, sans-serif; margin-left: 6px; cursor: pointer; padding: 0 0 3px; text-align: center; -webkit-box-sizing: border-box; box-sizing: border-box; }
+html:not(.touch) .sh-nav .rarr { display: -webkit-inline-flex; display: inline-flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center; }
 .rarr:hover { background: #2a3346; }
-html:not(.touch) .sh-nav .rarr { display: inline-block; }
 .filters.arrows { position: relative; }
 html:not(.touch) .filters.arrows { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
 html:not(.touch) .filters.arrows .rarr { display: inline-block; -webkit-flex: 0 0 32px; flex: 0 0 32px; margin: 0 4px; }
 html:not(.touch) .filters.arrows .chips { -webkit-flex: 1; flex: 1; min-width: 0; margin: 4px 0 6px; }
 [data-shelf] { cursor: grab; }
+
+.film-src { color: #8a94a6; font-size: 13px; margin-top: -4px; }
