@@ -73,6 +73,32 @@ TV.plural = function (n, one, few, many) {
   return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many;
 };
 TV.isArray = function (a) { return Object.prototype.toString.call(a) === '[object Array]'; };
+
+/* Значки интерфейса (1.3.1): свои простые SVG вместо символов ◀ ▶ ⛶ ⇄ ❚❚ и эмодзи — в шрифтах
+   iOS 9 их нет, и там вместо них были квадратики. SVG рисуется одинаково везде. */
+TV.ICONS = {
+  tv: 'M2 4h20v14H2z M4 6v10h16V6z M8 20h8v2H8z',
+  search: 'M10 3a7 7 0 1 0 4.2 12.6l5.1 5.1 1.4-1.4-5.1-5.1A7 7 0 0 0 10 3z M10 5a5 5 0 1 1 0 10 5 5 0 1 1 0-10z',
+  play: 'M7 4v16l13-8z',
+  pause: 'M6 4h4v16H6z M14 4h4v16h-4z',
+  film: 'M4 3h16v18H4z M6 5v2h2V5z M6 9v2h2V9z M6 13v2h2v-2z M6 17v2h2v-2z M16 5v2h2V5z M16 9v2h2V9z M16 13v2h2v-2z M16 17v2h2v-2z M10 5v14h4V5z',
+  star: 'M12 2l3 6.6 7.2.7-5.4 4.9 1.6 7.1L12 17.6l-6.4 3.7 1.6-7.1L1.8 9.3 9 8.6z',
+  starOff: 'M12 2l3 6.6 7.2.7-5.4 4.9 1.6 7.1L12 17.6l-6.4 3.7 1.6-7.1L1.8 9.3 9 8.6z M12 6.9l-1.7 3.8-4.1.4 3.1 2.8-.9 4 3.6-2.1 3.6 2.1-.9-4 3.1-2.8-4.1-.4z',
+  menu: 'M3 5h18v2H3z M3 11h18v2H3z M3 17h18v2H3z',
+  close: 'M5.6 4.2L12 10.6l6.4-6.4 1.4 1.4-6.4 6.4 6.4 6.4-1.4 1.4-6.4-6.4-6.4 6.4-1.4-1.4 6.4-6.4-6.4-6.4z',
+  down: 'M11 3h2v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6z M4 19h16v2H4z',
+  opts: 'M3 6h11v2H3z M18 6h3v2h-3z M14 4h2v6h-2z M3 16h4v2H3z M11 16h10v2H11z M7 14h2v6H7z',
+  guide: 'M3 5h3v2H3z M8 5h13v2H8z M3 11h3v2H3z M8 11h13v2H8z M3 17h3v2H3z M8 17h13v2H8z',
+  prev: 'M5 4h2v16H5z M20 4v16L9 12z',
+  next: 'M17 4h2v16h-2z M4 4l11 8-11 8z',
+  swap: 'M7 3L2 8l5 5V9h12V7H7z M17 11v4H5v2h12v4l5-5z',
+  fs: 'M3 3h7v2H5v5H3z M14 3h7v7h-2V5h-5z M3 14h2v5h5v2H3z M19 14h2v7h-7v-2h5z'
+};
+TV.icon = function (name) {
+  return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="' + (TV.ICONS[name] || '') + '"/></svg>';
+};
+/* Старая iOS (9–11): нет официальных плееров YouTube и Rutube */
+TV.oldIOS = function () { return !!(TV.device && TV.device.ios && TV.device.iosVer && TV.device.iosVer < 12); };
 TV.filter = function (arr, fn) { var r = []; for (var i = 0; i < arr.length; i++) if (fn(arr[i], i)) r.push(arr[i]); return r; };
 TV.find = function (arr, fn) { for (var i = 0; i < arr.length; i++) if (fn(arr[i], i)) return arr[i]; return null; };
 TV.indexOf = function (arr, fn) { for (var i = 0; i < arr.length; i++) if (fn(arr[i], i)) return i; return -1; };

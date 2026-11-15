@@ -16,9 +16,9 @@
 (function () {
   var A = TV.app = {};
   var TABS = [
-    { id: 'tv', icon: '📺', name: 'ТВ' }, { id: 'search', icon: '🔍', name: 'Поиск' },
-    { id: 'yt', icon: '▶️', name: 'Видео' }, { id: 'movies', icon: '🎬', name: 'Фильмы' },
-    { id: 'fav', icon: '⭐', name: 'Избранное' }, { id: 'more', icon: '☰', name: 'Ещё' }
+    { id: 'tv', icon: 'tv', name: 'ТВ' }, { id: 'search', icon: 'search', name: 'Поиск' },
+    { id: 'yt', icon: 'play', name: 'Видео' }, { id: 'movies', icon: 'film', name: 'Фильмы' },
+    { id: 'fav', icon: 'star', name: 'Избранное' }, { id: 'more', icon: 'menu', name: 'Ещё' }
   ];
   var tab = 'tv';
   var stacks = {};
@@ -414,7 +414,10 @@
   function feedsList() {
     return TV.filter(TV.yt.feeds, function (f) { return TV.settings.kids ? f.id === 'kidsnew' : f.id !== 'new' && f.id !== 'classic'; });
   }
-  function archList() { return TV.settings.kids ? TV.filter(TV.arch.shelves, function (s) { return s.id === 'toons'; }) : TV.arch.shelves; }
+  function archList() {
+    if (TV.settings.kids) return TV.filter(TV.arch.shelves, function (s) { return s.id === 'toons'; });
+    return TV.lite() ? TV.arch.shelves.slice(0, 3) : TV.arch.shelves;   // лёгкий режим: новые поступления, мультфильмы, классика
+  }
   function ytSearchShelves() { return TV.settings.kids ? TV.filter(TV.yt.shelves, function (s) { return s.id === 'kids'; }) : TV.yt.shelves; }
   function ytShelves() {
     var m = TV.yt.mode();
@@ -520,7 +523,7 @@
         h += shelf('🆕 Новое бесплатно', TV.movies.freeItems(fAll, 24), 'fr-new', 'go', 'movies/freelist:all');
         if (fFilm.length) h += shelf('🎬 Фильмы целиком', TV.movies.freeItems(fFilm, 24), 'fr-film', 'go', 'movies/freelist:film');
         if (fSer.length) h += shelf('📺 Сериалы целиком', TV.movies.freeItems(fSer, 24), 'fr-ser', 'go', 'movies/freelist:series');
-        TV.each(TV.movies.studios(), function (st) {
+        if (!TV.lite()) TV.each(TV.movies.studios(), function (st) {
           var l = TV.movies.free({ studio: st });
           if (l.length >= 6) h += shelf('🎞 ' + st, TV.movies.freeItems(l, 20), 'fr-st-' + st, 'go', 'movies/freelist:st-' + st);
         });
@@ -528,7 +531,8 @@
       if (ytFeedsOk() && !TV.settings.kids) h += placeholder('fdsh-classic', '🎞 Мосфильм и Беларусьфильм — официальные каналы');
       TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние'); });
       h += '<div class="free-h"><h2>🎬 Каталог по жанрам</h2><p class="note">Описание, официальный трейлер и где посмотреть.</p></div>';
-      TV.each(MV_SHELVES, function (g) {
+      // лёгкий режим (старая техника): пять основных жанров вместо тринадцати
+      TV.each(TV.lite() ? MV_SHELVES.slice(0, 5) : MV_SHELVES, function (g) {
         var l = TV.movies.find({ genre: g });
         if (l.length >= 4) h += shelf(TV.movies.genreName(g), TV.movies.items(l, 20), 'mv-' + g, 'fmsel', 'genre:' + g);
       });
@@ -1005,6 +1009,8 @@
     var t = top(), fn = S[t.s] || S.tv;
     var y = window.pageYOffset;
     var r = fn(t);
+    // На старой iOS символа «▶» нет в шрифтах (рисуется квадратиком) — убираем его из текста
+    if (TV.oldIOS()) { r.title = String(r.title).replace(/▶️?\s?/g, ''); r.html = String(r.html).replace(/▶️?\s?/g, ''); }
     var depth = stacks[tab].length;
     head.innerHTML = (depth > 1 ? '<button class="hbtn back" data-a="back" aria-label="Назад">‹</button>' : '') +
       '<h1>' + esc(r.title) + '</h1><div class="hright">' + (r.right || '') + '</div>';
@@ -1259,11 +1265,12 @@
   function buildTabs() {
     var tb = '';
     TV.each(TABS, function (t) {
-      if (t.id === 'yt' && !TV.settings.showYT) return;
-      tb += '<button data-a="tab" data-x="' + t.id + '"><span>' + t.icon + '</span>' + t.name + '</button>';
+      // «Видео» прячем и там, где оно не может работать (старая iOS без своего зеркала)
+      if (t.id === 'yt' && (!TV.settings.showYT || TV.yt.mode() === 'none')) return;
+      tb += '<button data-a="tab" data-x="' + t.id + '"><span>' + TV.icon(t.icon) + '</span>' + t.name + '</button>';
     });
     document.getElementById('tabbar').innerHTML = tb;
-    if (tab === 'yt' && !TV.settings.showYT) tab = 'tv';
+    if (tab === 'yt' && (!TV.settings.showYT || TV.yt.mode() === 'none')) tab = 'tv';
   }
 
   /* ================================================================ запуск */

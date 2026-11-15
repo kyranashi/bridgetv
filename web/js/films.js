@@ -166,6 +166,7 @@
      Детский режим — только с возрастной маркой до 6+. */
   M.free = function (f) {
     f = f || {};
+    if (TV.oldIOS()) return [];          // плеер Rutube на iOS 9–11 не работает — не показываем то, что нельзя посмотреть
     var q = TV.norm(f.q || '');
     return TV.filter(FREE, function (v) {
       if (TV.settings.kids && (v.age || 0) > 6) return false;

@@ -30,30 +30,30 @@
       '<div class="p-num"></div>' +
       '<div class="p-ui">' +
       '  <div class="p-top">' +
-      '    <button class="pbtn" data-p="close" aria-label="Назад">✕</button>' +
+      '    <button class="pbtn" data-p="close" aria-label="Назад">' + TV.icon('close') + '</button>' +
       '    <div class="p-title"><b></b><span></span></div>' +
-      '    <button class="pbtn" data-p="dl" aria-label="Скачать" title="Скачать на устройство">⬇</button>' +
-      '    <button class="pbtn" data-p="opts" aria-label="Качество, озвучка, субтитры" title="Качество, озвучка, субтитры">⚙</button>' +
-      '    <button class="pbtn" data-p="guide" aria-label="Программа передач" title="Программа передач">📋</button>' +
-      '    <button class="pbtn" data-p="fav" aria-label="В избранное">☆</button>' +
-      '    <button class="pbtn" data-p="list" aria-label="Список">☰</button>' +
+      '    <button class="pbtn" data-p="dl" aria-label="Скачать" title="Скачать на устройство">' + TV.icon('down') + '</button>' +
+      '    <button class="pbtn" data-p="opts" aria-label="Качество, озвучка, субтитры" title="Качество, озвучка, субтитры">' + TV.icon('opts') + '</button>' +
+      '    <button class="pbtn" data-p="guide" aria-label="Программа передач" title="Программа передач">' + TV.icon('guide') + '</button>' +
+      '    <button class="pbtn" data-p="fav" aria-label="В избранное">' + TV.icon('starOff') + '</button>' +
+      '    <button class="pbtn" data-p="list" aria-label="Список">' + TV.icon('menu') + '</button>' +
       '  </div>' +
       '  <div class="p-bottom">' +
       '    <div class="p-seek"><span class="p-cur">0:00</span><input type="range" min="0" max="1000" value="0" class="p-range"><span class="p-dur">0:00</span></div>' +
       '    <div class="p-row">' +
-      '      <button class="pbtn big" data-p="prev">◀</button>' +
+      '      <button class="pbtn big" data-p="prev" aria-label="Предыдущий">' + TV.icon('prev') + '</button>' +
       '      <button class="pbtn big" data-p="back10">−10</button>' +
       '      <button class="pbtn big" data-p="dvrback" title="Назад по эфиру">−30</button>' +
       '      <button class="pbtn" data-p="golive" title="Вернуться в прямой эфир">В эфир</button>' +
-      '      <button class="pbtn big" data-p="play">❚❚</button>' +
+      '      <button class="pbtn big" data-p="play" aria-label="Пауза">' + TV.icon('pause') + '</button>' +
       '      <button class="pbtn big" data-p="fwd10">+10</button>' +
-      '      <button class="pbtn big" data-p="next">▶</button>' +
-      '      <button class="pbtn" data-p="src" title="Другой источник">⇄</button>' +
-      '      <button class="pbtn" data-p="fs" title="Во весь экран">⛶</button>' +
+      '      <button class="pbtn big" data-p="next" aria-label="Следующий">' + TV.icon('next') + '</button>' +
+      '      <button class="pbtn" data-p="src" title="Другой источник" aria-label="Другой источник">' + TV.icon('swap') + '</button>' +
+      '      <button class="pbtn" data-p="fs" title="Во весь экран" aria-label="Во весь экран">' + TV.icon('fs') + '</button>' +
       '    </div>' +
       '  </div>' +
       '</div>' +
-      '<div class="p-side" data-panel="1"><div class="p-side-h"><span>Каналы</span><button class="pbtn" data-p="sideclose" aria-label="Закрыть список">✕</button></div><div class="p-side-list"></div></div>' +
+      '<div class="p-side" data-panel="1"><div class="p-side-h"><span>Каналы</span><button class="pbtn" data-p="sideclose" aria-label="Закрыть список">' + TV.icon('close') + '</button></div><div class="p-side-list"></div></div>' +
       '<div class="p-opts" data-panel="1"></div>';
     document.body.appendChild(el);
     video = $('#pv');
@@ -386,7 +386,7 @@
 
   function openOpts() {
     $('.p-side').className = 'p-side';
-    var t = state && state.tracks, s = TV.settings, h = '<div class="p-opts-in"><div class="p-opts-h">Настройки видео<button class="pbtn" data-p="optsclose">✕</button></div>';
+    var t = state && state.tracks, s = TV.settings, h = '<div class="p-opts-in"><div class="p-opts-h">Настройки видео<button class="pbtn" data-p="optsclose" aria-label="Закрыть">' + TV.icon('close') + '</button></div>';
     var item = function (kind, val, label, on) {
       return '<button class="p-opt' + (on ? ' on' : '') + '" data-p="opt:' + kind + ':' + TV.esc(val) + '">' + TV.esc(label) + '</button>';
     };
@@ -598,7 +598,7 @@
   function openGuide() {
     if (!state || !state.ch) return;
     $('.p-side').className = 'p-side';
-    var l = TV.epg.list(state.ch.id), t = TV.now(), day = '', h = '<div class="p-opts-in"><div class="p-opts-h">Программа<button class="pbtn" data-p="optsclose">✕</button></div>';
+    var l = TV.epg.list(state.ch.id), t = TV.now(), day = '', h = '<div class="p-opts-in"><div class="p-opts-h">Программа<button class="pbtn" data-p="optsclose" aria-label="Закрыть">' + TV.icon('close') + '</button></div>';
     TV.each(l, function (p) {
       if (p.b < t - 36e5) return;
       var dt = new Date(p.a), d = DAYS[dt.getDay()] + ', ' + dt.getDate() + ' ' + MONTHS[dt.getMonth()];   // без Intl — его нет в Safari iOS 9
@@ -688,7 +688,7 @@
     var it = cur(), live = state.live || state.isCh, multi = state.items.length > 1;
     el.className = 'open' + (live ? ' live' : ' vod') + (multi ? ' multi' : '') + (state.isCh ? ' ch' : '') + (state.embed ? ' embed' : '') + (uiOn || state.embed ? ' ui' : '');
     var favIt = state.ch ? { k: 'ch', id: state.ch.id, n: state.ch.n, img: state.ch.l } : it;
-    $('[data-p=fav]').textContent = favIt && TV.fav.has(favIt) ? '★' : '☆';
+    $('[data-p=fav]').innerHTML = TV.icon(favIt && TV.fav.has(favIt) ? 'star' : 'starOff');
     $('[data-p=src]').style.display = state.isCh && state.variants.length > 1 ? '' : 'none';
     $('[data-p=guide]').style.display = state.ch && TV.epg && TV.epg.list(state.ch.id).length ? '' : 'none';
     // ⚙ — только в режиме зеркала (у официального плеера YouTube своё меню качества, озвучки и субтитров)
@@ -696,7 +696,7 @@
     $('[data-p=dl]').style.display = TV.dl && TV.dl.canDownload(it) && !TV.dl.get(it.k + ':' + (it.id || it.u)) ? '' : 'none';
     setPlayIcon();
   }
-  function setPlayIcon() { if (el) $('[data-p=play]').textContent = video.paused ? '▶' : '❚❚'; }
+  function setPlayIcon() { if (el) $('[data-p=play]').innerHTML = TV.icon(video.paused ? 'play' : 'pause'); }
 
   function onTime() {
     if (state && (state.live || state.isCh)) { liveTick(); return; }
