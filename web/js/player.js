@@ -530,6 +530,8 @@
     if (!state.started) {
       state.started = true; state.retried = false;
       if (state.isCh) { TV.health.mark(state.variants[state.vi].u, true); TV.emit('health'); }
+      // Android TV (1.4.0): канал — в ряд «Продолжить» на главном экране телевизора
+      if (state.isCh && state.ch && TV.platform === 'android') TV.callNative({ cmd: 'watchnext', id: state.ch.id, title: state.ch.n, img: /^https?:/.test(state.ch.l || '') ? state.ch.l : '' });
       var it = cur();
       if (state.resumeAt > 1) {               // смена качества — продолжить с того же места
         try { video.currentTime = state.resumeAt; } catch (e) {}

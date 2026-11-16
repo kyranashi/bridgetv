@@ -1377,9 +1377,10 @@
   var SIMPLE_HIDE = { search: 1, yt: 1 };
 
   /* Простой режим в приложении: сразу включить последний канал (как обычный телевизор) */
-  function autoplayLast() {
-    if (!TV.lite() || !TV.native || TV.player.isOpen() || TV.settings.kids) return;
-    var x = TV.find(TV.history.all(), function (h) { return h.k === 'ch'; });
+  function autoplayLast(id) {
+    // id — канал из «Продолжить» на главном экране Android TV (открывается в любом режиме)
+    if (!id && (!TV.lite() || !TV.native || TV.player.isOpen() || TV.settings.kids)) return;
+    var x = id ? { id: id } : TV.find(TV.history.all(), function (h) { return h.k === 'ch'; });
     var c = x && TV.catalog.byId(x.id);
     if (!c || TV.blocked(c)) return;
     var all = lists['tv-' + TV.settings.region] || [c], i = -1;
@@ -1457,7 +1458,10 @@
       if (bar) bar.outerHTML = scanButton();
     });
     render();
-    setTimeout(autoplayLast, 600);
+    var deep = '';
+    try { deep = TV._bridge && TV._bridge.startCh ? String(TV._bridge.startCh() || '') : ''; } catch (e) {}
+    setTimeout(function () { autoplayLast(deep); }, 600);
+    TV.on('openCh', function (d) { if (d && d.ch) { if (TV.player.isOpen()) TV.player.close(); autoplayLast(String(d.ch)); } });
     if (!TV.lite()) TV.yt.discover();
     autoUpdate();
   };

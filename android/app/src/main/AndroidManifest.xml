@@ -36,6 +36,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+            <!-- «Продолжить» на главном экране Android TV (1.4.0): bridgetv://play/<канал> -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="bridgetv" android:host="play" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

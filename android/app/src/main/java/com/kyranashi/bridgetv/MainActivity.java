@@ -36,11 +36,14 @@ public class MainActivity extends Activity {
     private FrameLayout root;
     private View customView;
     private WebChromeClient.CustomViewCallback customCallback;
+    /** Канал из «Продолжить» Android TV (bridgetv://play/<id>) — интерфейс забирает его при запуске (Bridge.startCh) */
+    volatile String pendingCh;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        pendingCh = WatchNext.channelFrom(getIntent());
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
@@ -93,6 +96,16 @@ public class MainActivity extends Activity {
             public void onHideCustomView() { hideCustomView(); }
         });
         web.loadUrl("file:///android_asset/www/web/index.html");
+    }
+
+    /** Приложение уже открыто, а на главном экране ТВ нажали «Продолжить» — сразу включить канал */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String c = WatchNext.channelFrom(intent);
+        if (c != null && web != null)
+            web.evaluateJavascript("TV.nativeEvent&&TV.nativeEvent('open',{\"ch\":" + org.json.JSONObject.quote(c) + "})", null);
     }
 
     // ------------------------------------------------------------------ голосовой поиск (1.0.0)
