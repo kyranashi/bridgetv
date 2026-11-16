@@ -128,6 +128,10 @@ public class Bridge {
         if ("fetch".equals(cmd)) pool.execute(new Runnable() { public void run() { fetch(m); } });
         else if ("save".equals(cmd)) save(m.optString("key"), m.isNull("value") ? null : m.optString("value"));
         else if ("awake".equals(cmd)) awake(m.optBoolean("on"));
+        else if ("ytwin".equals(cmd) && act instanceof MainActivity) {     // поиск/видео на сайте YouTube — окно приложения
+            final String u = m.optString("url");
+            if (MainActivity.ytAllowed(u)) act.runOnUiThread(new Runnable() { public void run() { ((MainActivity) act).openYouTube(u); } });
+        }
         else if ("voice".equals(cmd) && act instanceof MainActivity) {
             act.runOnUiThread(new Runnable() { public void run() { ((MainActivity) act).startVoice(); } });
         }

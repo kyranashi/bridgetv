@@ -40,6 +40,9 @@ jobs:
       - name: Каталог фильмов (Apple + Wikidata)
         continue-on-error: true      # источник недоступен — сайт публикуется, приложение покажет «Бесплатно» и поиск
         run: python tools/build_movies.py
+      - name: Подборки «Видео» без ключа (RSS официальных каналов)
+        continue-on-error: true      # YouTube не ответил — сайт публикуется, приложения читают RSS сами
+        run: python tools/build_ytfeeds.py
       - name: Подготовить сайт
         run: |
           mkdir -p _site

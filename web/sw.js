@@ -23,7 +23,7 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   var req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;     // чужое — без вмешательства
-  if (/\/data\/(catalog\.(js|json)|epg\.json|movies\.json)$/.test(url.pathname)) {
+  if (/\/data\/(catalog\.(js|json)|epg\.json|movies\.json|ytfeeds\.json)$/.test(url.pathname)) {
     e.respondWith(fetch(req).then(function (r) {           // каталог и программа передач: сначала сеть
       var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); });
       return r;

@@ -358,10 +358,10 @@
     if (m === 'none') return '<section class="box"><h3>▶️ Видео на этом устройстве</h3><p class="note">Официальный плеер YouTube не поддерживает ' +
       'эту версию системы (' + esc(TV.device.label) + '). Можно подключить своё зеркало Invidious — тогда видео пойдут и здесь.</p>' +
       '<button class="btn primary" data-a="go" data-x="more/settings">Настройки → своё зеркало</button></section>';
-    if (m === 'official' && !TV.yt.hasKey()) return '<section class="box"><h3>🔑 Тренды и поиск YouTube</h3><p class="note">Видео играют в официальном ' +
-      'плеере YouTube. Для трендов, рубрик и поиска нужен бесплатный ключ YouTube API (5 минут, один раз) — без ключа доступны ' +
-      'подборки официальных каналов — новые мультфильмы и аниме' + (TV.native ? '' : ' (в приложении BridgeTV)') + ' и поиск на сайте YouTube.</p>' +
-      '<button class="btn primary" data-a="go" data-x="more/ytkey">Как получить ключ</button></section>';
+    // Без ключа всё основное работает (подборки, «Популярное»), поэтому — короткая строка, а не большой блок
+    if (m === 'official' && !TV.yt.hasKey()) return '<p class="note">Поиск открывает результаты на YouTube' +
+      (TV.platform === 'desktop' || TV.platform === 'android' ? ' (в окне приложения)' : '') +
+      '. Искать прямо здесь — с бесплатным ключом: <button class="link" data-a="go" data-x="more/ytkey">как получить</button>.</p>';
     return '';
   }
 
@@ -430,9 +430,13 @@
     var m = TV.yt.mode();
     if (m === 'none') return [];
     var out = [];
-    // RSS-ленты официальных каналов — в приложении (без ключа) или через API (с ключом)
-    if (m === 'official' && (TV.native || TV.yt.hasKey())) TV.each(feedsList(), function (f) { out.push({ id: 'f-' + f.id, title: f.title, feed: f }); });
-    if (TV.yt.canSearch()) out = ytSearchShelves().concat(out);   // тренды YouTube — первыми
+    // Подборки официальных каналов — везде (готовые с сервера сборки, в приложениях ещё и RSS напрямую).
+    // Без ключа первым идёт «Популярное за 3 дня» — замена трендов.
+    if (m === 'official') {
+      if (!TV.yt.canSearch() && !TV.settings.kids) out.push({ id: 'f-trend', title: TV.yt.trendFeed.title, feed: TV.yt.trendFeed });
+      TV.each(feedsList(), function (f) { out.push({ id: 'f-' + f.id, title: f.title, feed: f }); });
+    }
+    if (TV.yt.canSearch()) out = ytSearchShelves().concat(out);   // с ключом — тренды YouTube первыми
     return out;
   }
   function loadYtShelves() {
@@ -593,7 +597,7 @@
   /* Можно ли показать подборки официальных каналов YouTube на этом устройстве */
   function ytFeedsOk() {
     var m = TV.settings.showYT ? TV.yt.mode() : 'none';
-    return m === 'mirror' || (m === 'official' && (TV.native || TV.yt.hasKey()));
+    return m === 'mirror' || m === 'official';      // подборки есть везде (data/ytfeeds.json)
   }
   function placeholderBig() { return '<div class="loading-big"><span class="spin"></span></div>'; }
 

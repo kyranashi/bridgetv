@@ -258,7 +258,7 @@
        ПК: отдельное окно программы (desktop/main.js: openYouTube); Android: приложение YouTube или браузер;
        остальное — браузер. */
     openSite: function (url) {
-      if (TV.platform === 'desktop' && TV.callNative({ cmd: 'ytwin', url: url })) return;
+      if ((TV.platform === 'desktop' || TV.platform === 'android') && TV.callNative({ cmd: 'ytwin', url: url })) return;
       TV.openExternal(url);
     }
   };
@@ -293,10 +293,65 @@
       'UCDb0peSmF5rLX7BvuTcJfCw',   // Aniplex USA
       'UCJXUTDi2Lc8Qub4bxICcPCA'] },  // GKIDS
     { id: 'classic', title: '🎞 Классика: Мосфильм и Беларусьфильм', chs: [
-      'UCEK3tT7DcfWGWJpNEDBdWog', 'UC4NbKSNLUi9C1h-eA3xwRCw'] }
+      'UCEK3tT7DcfWGWJpNEDBdWog', 'UC4NbKSNLUi9C1h-eA3xwRCw'] },
+    // 1.4.0 — подборки по темам без ключа (официальные каналы; id проверены по RSS 16.11.2026)
+    { id: 'music', title: '🎵 Музыка и клипы', chs: [
+      'UCgUaJJ5LXVOhjQHMlR1D6VQ',   // RU.TV
+      'UC2eH4vw5JuVpzLDrCkxW2pQ'] },  // МУЗ-ТВ
+    { id: 'fun', title: '😂 Юмор', chs: [
+      'UCjWUYdxWlr4Mys7__XcY4Vg',   // Уральские пельмени
+      'UCsIEFXNO4bxh0hW3-_z2-0g',   // Comedy Club
+      'UCFKDcjx5ekaoMog_9zw82fA'] },  // ТНТ
+    { id: 'sport', title: '⚽ Спорт', chs: [
+      'UCtetJiD_llxdGL4Uh5-Oe2w'] },  // Матч ТВ
+    { id: 'science', title: '🔬 Наука', chs: [
+      'UCSPd93is2UQsd_jZ6yHBfqQ',   // ПостНаука
+      'UCSaVoRErW4kqKsDqExs2MXA'] },  // SciOne
+    { id: 'games', title: '🎮 Игры', chs: [
+      'UCq7JZ8ATgQWeu6sDM1czjhg',   // StopGame
+      'UCDtARoS3toLRXrIwAayj4kQ'] }   // Игромания
   ];
+  /* Готовые подборки с сервера сборки (data/ytfeeds.json, tools/build_ytfeeds.py): работают и в браузере,
+     где RSS YouTube не читается из-за CORS. Нет файла — приложения читают RSS сами (как раньше). */
+  var FEEDS = null, feedsBusy = false, feedsWait = [];
+  function loadFeedsJson(cb) {
+    if (FEEDS) return cb(FEEDS);
+    feedsWait.push(cb);
+    if (feedsBusy) return;
+    feedsBusy = true;
+    var src = [];
+    if (/^https?:/.test(location.protocol)) src.push('../data/ytfeeds.json');
+    if (TV.PAGES) src.push(TV.PAGES + '/data/ytfeeds.json');
+    var i = 0;
+    (function next() {
+      var done = function (d) { FEEDS = d; feedsBusy = false; var w = feedsWait; feedsWait = []; TV.each(w, function (f) { f(d); }); };
+      if (i >= src.length) return done({});
+      TV.ajax(src[i++] + '?d=' + Math.floor(TV.now() / 36e5), { timeout: 20000 }, function (err, j) {
+        if (err || !j || !j.feeds || typeof j.feeds !== 'object') return next();
+        done(j.feeds);
+      });
+    })();
+  }
+  function feedItems(list) {
+    var out = [];
+    TV.each(TV.isArray(list) ? list : [], function (v) {
+      if (!v || !/^[\w-]{11}$/.test(v.id || '') || typeof v.n !== 'string') return;    // только корректные записи
+      out.push({ k: 'yt', id: v.id, n: v.n, sub: v.sub || '', ch: v.ch || '', img: thumbI(v.id), date: v.date || '', views: +v.views || 0 });
+    });
+    return clean(out);
+  }
+  /* Популярное за 3 дня — замена трендов без ключа (собирается из всех подборок) */
+  TV.yt.trendFeed = { id: 'trend', title: '🔥 Популярное за 3 дня' };
   /* Слить ленты нескольких каналов, свежее первым */
   TV.yt.feed = function (f, cb) {
+    loadFeedsJson(function (d) {
+      var ready = feedItems(d[f.id]);
+      if (ready.length || !f.chs) return cb(ready.length ? null : 'не загрузилось', ready);
+      if (!TV.native) return cb('не загрузилось', []);        // в браузере RSS не читается (CORS)
+      rssFeed(f, cb);
+    });
+  };
+  function rssFeed(f, cb) {
     var left = f.chs.length, all = [], errs = 0;
     TV.each(f.chs, function (ch) {
       TV.yt.channel(ch, function (err, list) {

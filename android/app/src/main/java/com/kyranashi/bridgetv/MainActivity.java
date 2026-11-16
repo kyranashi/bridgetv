@@ -127,6 +127,82 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) { }
     }
 
+    // ------------------------------------------------------------------ окно сайта YouTube (1.4.0)
+    // Без ключа API приложение не может само искать на YouTube, поэтому поиск и видео открываются на самом
+    // сайте YouTube — в отдельном окне поверх приложения (как окно на ПК). Окно изолировано: без моста
+    // TVAndroid, без доступа к файлам; переходы — только по адресам YouTube и входа Google, остальное — в браузер.
+    private android.app.Dialog ytDialog;
+    private WebView ytWeb;
+
+    static boolean ytAllowed(String url) {
+        try {
+            Uri u = Uri.parse(url);
+            String h = u.getHost();
+            if (h == null || !"https".equals(u.getScheme())) return false;
+            h = h.toLowerCase(java.util.Locale.ROOT);
+            return h.equals("youtube.com") || h.endsWith(".youtube.com") || h.equals("youtu.be")
+                    || h.equals("accounts.google.com") || h.equals("consent.google.com") || h.equals("www.google.com");
+        } catch (Exception e) { return false; }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    void openYouTube(String url) {
+        if (!ytAllowed(url)) return;
+        if (ytDialog != null && ytWeb != null) { ytWeb.loadUrl(url); ytDialog.show(); return; }
+        final FrameLayout box = new FrameLayout(this);
+        box.setBackgroundColor(0xFF0F0F0F);
+        ytWeb = new WebView(this);
+        WebSettings s = ytWeb.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setAllowFileAccess(false);
+        s.setGeolocationEnabled(false);
+        s.setSaveFormData(false);
+        if (Build.VERSION.SDK_INT >= 16) { s.setAllowFileAccessFromFileURLs(false); s.setAllowUniversalAccessFromFileURLs(false); }
+        ytWeb.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String u) {
+                if (ytAllowed(u)) return false;
+                if (Bridge.isWeb(u)) openExternal(u);      // чужие ссылки — в обычном браузере
+                return true;
+            }
+        });
+        ytWeb.setWebChromeClient(new WebChromeClient() {
+            private View full;
+            private CustomViewCallback cb;
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {       // видео на весь экран
+                if (full != null) { callback.onCustomViewHidden(); return; }
+                full = view; cb = callback;
+                box.addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                ytWeb.setVisibility(View.GONE);
+            }
+            @Override
+            public void onHideCustomView() {
+                if (full == null) return;
+                box.removeView(full); full = null;
+                ytWeb.setVisibility(View.VISIBLE);
+                if (cb != null) cb.onCustomViewHidden();
+                cb = null;
+            }
+        });
+        box.addView(ytWeb, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        ytDialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        ytDialog.setContentView(box);
+        // «Назад»: по страницам YouTube, а с первой — закрыть окно и вернуться в BridgeTV
+        ytDialog.setOnKeyListener(new android.content.DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(android.content.DialogInterface d, int code, android.view.KeyEvent e) {
+                if (code != android.view.KeyEvent.KEYCODE_BACK || e.getAction() != android.view.KeyEvent.ACTION_UP) return false;
+                if (ytWeb.canGoBack()) ytWeb.goBack(); else { ytWeb.loadUrl("about:blank"); d.dismiss(); }
+                return true;
+            }
+        });
+        ytDialog.show();
+        ytWeb.loadUrl(url);
+    }
+
     void openExternal(String url) {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) { }
     }
@@ -153,5 +229,10 @@ public class MainActivity extends Activity {
 
     @Override protected void onPause() { super.onPause(); web.onPause(); }
     @Override protected void onResume() { super.onResume(); web.onResume(); }
-    @Override protected void onDestroy() { web.destroy(); super.onDestroy(); }
+    @Override protected void onDestroy() {
+        if (ytDialog != null) ytDialog.dismiss();
+        if (ytWeb != null) ytWeb.destroy();
+        web.destroy();
+        super.onDestroy();
+    }
 }
