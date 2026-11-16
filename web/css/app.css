@@ -425,3 +425,5 @@ html.lite .chip { padding: 12px 18px; font-size: 16px; margin: 0 8px 8px 0; }
 html.lite .btn { padding: 13px 20px; font-size: 16px; }
 html.lite .pbtn { min-width: 52px; min-height: 52px; }
 html.lite #tabbar button { font-size: 13px; }
+/* 1.4.0: страница сериала — широкая обложка */
+.film-p.wide { width: 320px; max-width: 46%; }

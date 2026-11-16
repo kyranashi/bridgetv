@@ -91,8 +91,15 @@
       '<span class="th"><img loading="lazy" src="' + esc(it.img) + '" alt="" onerror="this.style.display=\'none\'"></span>' +
       '<span class="t">' + esc(it.n) + '</span><span class="s">' + esc(it.sub || '') + '</span></button>';
   }
+  /* Сериал одной карточкой (1.4.0) — открывает список серий */
+  function serCard(it) {
+    return '<button class="card v" data-a="series" data-x="' + esc(it.id) + '">' +
+      '<span class="th">' + (it.img ? '<img loading="lazy" src="' + esc(it.img) + '" alt="" onerror="this.style.display=\'none\'">' : '') + '</span>' +
+      '<span class="t">' + esc(it.n) + '</span><span class="s">' + esc(it.sub || '') + '</span></button>';
+  }
   function card(it, l, i) {
-    if (it.k === 'mv') return mvCard(it); return it.v || it.k === 'ch' && TV.catalog.byId(it.id) ? chCard(it.v ? it : TV.catalog.byId(it.id), l, i) : vCard(it, l, i); }
+    if (it.k === 'mv') return mvCard(it);
+    if (it.k === 'rts') return serCard(it); return it.v || it.k === 'ch' && TV.catalog.byId(it.id) ? chCard(it.v ? it : TV.catalog.byId(it.id), l, i) : vCard(it, l, i); }
 
   function grid(items, l, cls) {
     reg(l, items);
@@ -478,7 +485,7 @@
   /* С 1.1.0 — каталог фильмов как в онлайн-кинотеатрах: постеры, жанры, годы, новые первыми;
      страница фильма с описанием, официальным трейлером и «Где смотреть». Только фильмы —
      видео YouTube сюда не подмешиваются (они на вкладке «Видео»). */
-  var fm = { q: '', genre: 'all', years: 'all' };
+  var fm = { q: '', genre: 'all', years: 'all', kind: 'film', studio: '' };
   function fmActive() { return !!(fm.q || fm.genre !== 'all' || fm.years !== 'all'); }
   var MV_SHELVES = ['action', 'comedy', 'thriller', 'scifi', 'horror', 'drama', 'family', 'anime', 'romance', 'doc', 'sport', 'war', 'classic'];
   S.movies = function () {
@@ -508,36 +515,46 @@
         TV.arch.search(fm.q, function (err, a) { fill('arsh-q', err || !a || !a.length ? '' : shelf('🎞 Бесплатно — общественное достояние', a, 'fm-ar')); });
       } : null;
     } else {
+      /* С 1.4.0 — две части без повторов: «Фильмы» и «Сериалы» (переключатель), студии — фильтром.
+         Каждый фильм/сериал показывается один раз; серии одного сериала — одной карточкой. */
+      var hasSer = TV.movies.series().length > 0;
+      if (hasSer) h += chips([{ id: 'film', name: '🎬 Фильмы' }, { id: 'series', name: '📺 Сериалы' }], fm.kind, 'fmkind');
+      var studios = TV.movies.studios();
+      if (studios.length > 1 && !TV.lite()) {
+        var stItems = [{ id: '', name: 'Все студии' }];
+        TV.each(studios, function (st) { stItems.push({ id: st, name: st }); });
+        h += chips(stItems, fm.studio, 'fmstudio');
+      }
       var cont = TV.filter(TV.history.all(), function (x) { return x.k !== 'ch' && x.k !== 'yt' && x.k !== 'tr' && x.id && TV.positions.get(x.k + x.id) > 0; });
       if (cont.length) h += shelf('⏯ Продолжить просмотр', cont.slice(0, 15), 'mv-cont');
-      var ready = TV.filter(dls, function (d) { return d.done; });
-      if (ready.length) { var di = []; TV.each(ready, function (d) { di.push(TV.dl.item(d)); }); h += shelf('📥 Скачанные', di, 'mv-dl', 'go', 'movies/downloads'); }
-      // «Новинки» — художественные фильмы (документальные и прочее — в своих полках)
-      var fresh = TV.filter(TV.movies.find({}), function (m) { return m.g !== 'doc' && m.g !== 'other' && m.g !== 'sport'; });
-      h += shelf('🆕 Новинки', TV.movies.items(fresh, 24), 'mv-new', 'fmsel', 'years:y0');
-      // «Можно смотреть бесплатно» — полные фильмы, которые законно доступны: официальные каналы
-      // киностудий (сами правообладатели, в плеере YouTube) и общественное достояние (archive.org)
-      h += '<div class="free-h"><h2>▶ Можно смотреть бесплатно</h2><p class="note">Полные фильмы и сериалы целиком — законно: их выложили сами студии и продюсеры (Star Media, «Мосфильм», «Марс Медиа», киностудия Горького, Госфильмофонд) в плеере Rutube, а также фильмы общественного достояния.</p></div>';
-      var fAll = TV.movies.free({}), fFilm = TV.movies.free({ kind: 'film' }), fSer = TV.movies.free({ kind: 'series' });
-      if (fAll.length) {
-        h += shelf('🆕 Новое бесплатно', TV.movies.freeItems(fAll, 24), 'fr-new', 'go', 'movies/freelist:all');
-        if (fFilm.length) h += shelf('🎬 Фильмы целиком', TV.movies.freeItems(fFilm, 24), 'fr-film', 'go', 'movies/freelist:film');
-        if (fSer.length) h += shelf('📺 Сериалы целиком', TV.movies.freeItems(fSer, 24), 'fr-ser', 'go', 'movies/freelist:series');
-        if (!TV.lite()) TV.each(TV.movies.studios(), function (st) {
-          var l = TV.movies.free({ studio: st });
-          if (l.length >= 6) h += shelf('🎞 ' + st, TV.movies.freeItems(l, 20), 'fr-st-' + st, 'go', 'movies/freelist:st-' + st);
-        });
+      if (fm.kind === 'series' && hasSer) {
+        var ser = TV.movies.series({ studio: fm.studio });
+        h += '<div class="free-h"><h2>📺 Сериалы целиком — бесплатно</h2><p class="note">Новые первыми. Их выложили сами студии и продюсеры в плеере Rutube.</p></div>' +
+          (ser.length ? grid(TV.movies.seriesItems(ser), 'ser-all', 'vs') : empty('У этой студии сериалов нет.', '📺'));
+        after = null;
+      } else {
+        var ready = TV.filter(dls, function (d) { return d.done; });
+        if (ready.length) { var di = []; TV.each(ready, function (d) { di.push(TV.dl.item(d)); }); h += shelf('📥 Скачанные', di, 'mv-dl', 'go', 'movies/downloads'); }
+        // 1) Смотреть целиком бесплатно: студии и продюсеры (Rutube), затем общественное достояние
+        var fFilm = TV.movies.free({ kind: 'film', studio: fm.studio });
+        h += '<div class="free-h"><h2>▶ Смотреть бесплатно</h2><p class="note">Полные фильмы целиком — законно: от самих студий и продюсеров (Rutube) и из общественного достояния.</p></div>';
+        if (fFilm.length) h += shelf('🆕 Новые фильмы целиком', TV.movies.freeItems(fFilm, 24), 'fr-film', 'go', 'movies/freelist:film');
+        if (!fm.studio) {
+          if (ytFeedsOk() && !TV.settings.kids) h += placeholder('fdsh-classic', '🎞 Мосфильм и Беларусьфильм — официальные каналы');
+          TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние'); });
+          // 2) Скоро в кино и премьеры — только трейлеры, отдельно от того, что можно смотреть
+          var fresh = TV.filter(TV.movies.find({}), function (m) { return m.g !== 'doc' && m.g !== 'other' && m.g !== 'sport'; }).slice(0, 24), seen = {};
+          TV.each(fresh, function (m) { seen[m.id] = 1; });
+          h += '<div class="free-h"><h2>🎟 Скоро в кино и премьеры</h2><p class="note">Трейлеры новых фильмов и где их посмотреть легально (обычно по подписке).</p></div>';
+          h += shelf('🆕 Премьеры', TV.movies.items(fresh), 'mv-new', 'fmsel', 'years:y0');
+          // по жанрам — без тех, что уже в «Премьерах»; лёгкий режим — пять основных жанров
+          TV.each(TV.lite() ? MV_SHELVES.slice(0, 5) : MV_SHELVES, function (g) {
+            var l = TV.filter(TV.movies.find({ genre: g }), function (m) { return !seen[m.id]; });
+            if (l.length >= 4) h += shelf(TV.movies.genreName(g), TV.movies.items(l, 20), 'mv-' + g, 'fmsel', 'genre:' + g);
+          });
+          h += '<p class="note">Премьеры — официальные данные кинопрокатчиков (Apple TV) и Wikidata, обновляются каждый день. «Общественное достояние» — archive.org.</p>';
+        } else after = null;
       }
-      if (ytFeedsOk() && !TV.settings.kids) h += placeholder('fdsh-classic', '🎞 Мосфильм и Беларусьфильм — официальные каналы');
-      TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние'); });
-      h += '<div class="free-h"><h2>🎬 Каталог по жанрам</h2><p class="note">Описание, официальный трейлер и где посмотреть.</p></div>';
-      // лёгкий режим (старая техника): пять основных жанров вместо тринадцати
-      TV.each(TV.lite() ? MV_SHELVES.slice(0, 5) : MV_SHELVES, function (g) {
-        var l = TV.movies.find({ genre: g });
-        if (l.length >= 4) h += shelf(TV.movies.genreName(g), TV.movies.items(l, 20), 'mv-' + g, 'fmsel', 'genre:' + g);
-      });
-      h += '<p class="note">Каталог — официальные данные кинопрокатчиков (Apple TV) и Wikidata, обновляется каждый день. ' +
-        'У каждого фильма — официальный трейлер и ссылки, где его посмотреть легально. «Бесплатно» — фильмы в общественном достоянии (archive.org).</p>';
     }
     h += '<div class="tools"><button class="btn" data-a="google">🔎 Искать в Google</button>' +
       (TV.dl.available() ? '<button class="btn" data-a="go" data-x="movies/downloads">📥 Загрузки' + (dls.length ? ' (' + dls.length + ')' : '') + '</button>' : '') +
@@ -630,9 +647,28 @@
     return { title: title, html: h };
   };
 
+  /* Сериал: все серии по порядку; «▶» первой серии — весь список, дальше серии идут сами (автопереход) */
+  S.series = function (p) {
+    if (!TV.movies.ready()) return { title: 'Сериал', html: placeholderBig(), after: function () { TV.movies.load(function () { if (top().s === 'series') render(true); }); } };
+    var g = TV.movies.seriesByKey(p.id);
+    if (!g) return { title: 'Сериал', html: empty('Сериал не найден — каталог обновился.', '📺') };
+    var items = TV.movies.freeItems(g.eps);
+    TV.each(items, function (it, i) { it.n = g.t + ' — ' + TV.movies.epName(g, g.eps[i]); });
+    reg('ser-eps', items);
+    var h = '<div class="film"><div class="film-p wide">' + (g.img ? '<img src="' + esc(g.img) + '" alt="">' : '') + '</div><div class="film-i"><h2>' + esc(g.t) + '</h2>' +
+      '<div class="film-f">' + esc(g.a + (g.age ? ' · ' + g.age + '+' : '') + ' · ' + g.eps.length + (g.eps.length > 1 ? ' видео' : ' видео (все серии)')) + '</div>' +
+      '<div class="tools"><button class="btn primary" data-a="play" data-l="ser-eps" data-i="0">▶ Смотреть с начала</button></div>' +
+      '<p class="note">Бесплатно, законно — выложено правообладателем в плеере Rutube. Следующая серия включается сама.</p></div></div><div class="rows">';
+    TV.each(g.eps, function (v, i) {
+      h += '<button class="row" data-a="play" data-l="ser-eps" data-i="' + i + '"><span class="ri">' + TV.icon('play') + '</span><span class="rt"><b>' +
+        esc(TV.movies.epName(g, v)) + '</b><small>' + v.min + ' мин</small></span></button>';
+    });
+    return { title: g.t, html: h + '</div>' };
+  };
+
   /* Все бесплатные фильмы/сериалы правообладателей: p.id = all | film | series | st-<студия>; новые первыми */
   S.freelist = function (p) {
-    var id = p.id || 'all', f = {}, title = '🆕 Новое бесплатно';
+    var id = p.id || 'all', f = { studio: fm.studio || undefined }, title = '🆕 Новое бесплатно';
     if (id === 'film') { f.kind = 'film'; title = '🎬 Фильмы целиком'; }
     else if (id === 'series') { f.kind = 'series'; title = '📺 Сериалы целиком'; }
     else if (id.indexOf('st-') === 0) { f.studio = id.slice(3); title = '🎞 ' + f.studio; }
@@ -713,12 +749,16 @@
       jobs.push({ ph: 'arsh-' + s.id, key: 'ar:' + s.id, title: '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние', l: 'arl-' + s.id, more: s.id,
         load: function (cb) { TV.arch.query(s.q, 40, cb, s.sort); } });
     });
-    var i = 0;
+    var i = 0, shown = {};     // один фильм — в одной полке (в архиве он часто лежит сразу в нескольких подборках)
     function nextShelf() {
       if (i >= jobs.length || tab !== 'movies' || stacks.movies.length > 1) return;
       var j = jobs[i++];
       cached(j.key, j.load, function (err, items) {
-        var vids = TV.filter(items || [], function (x) { return x.k !== 'ytc'; });
+        var vids = TV.filter(items || [], function (x) {
+          var t = 't:' + TV.norm(x.n || '');                 // и по названию: один фильм бывает загружен несколько раз
+          if (x.k === 'ytc' || shown[x.id] || shown[t]) return false;
+          shown[x.id] = shown[t] = 1; return true;
+        });
         fill(j.ph, err || !vids.length ? '' : shelf(j.title, vids, j.l, j.more ? 'archshelf' : null, j.more));
         nextShelf();
       });
@@ -1108,7 +1148,10 @@
       case 'rowr': A.rowStep(el, 1); break;
       case 'fmpickg': fm.genre = x; A.back(); window.scrollTo(0, 0); break;     // выбор — сразу к каталогу
       case 'fmpicky': fm.years = x; A.back(); window.scrollTo(0, 0); break;
-      case 'fmreset': fm.genre = 'all'; fm.years = 'all'; fm.q = ''; render(true); break;
+      case 'fmreset': fm.genre = 'all'; fm.years = 'all'; fm.q = ''; fm.studio = ''; render(true); break;
+      case 'fmkind': fm.kind = x === 'series' ? 'series' : 'film'; render(true); break;
+      case 'fmstudio': fm.studio = x || ''; render(true); break;
+      case 'series': push({ s: 'series', id: x }); break;
       case 'fmsel': { var kv = String(x).split(':'); if (kv[0] === 'genre') fm.genre = kv[1]; else fm.years = kv[1]; switchTab('movies', true); stacks.movies = [stacks.movies[0]]; render(); window.scrollTo(0, 0); break; }
       case 'film': push({ s: 'film', id: x }); break;
       case 'trailer': {
