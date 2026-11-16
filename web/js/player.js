@@ -273,7 +273,10 @@
 
   /* ------------------------------------------------------------ качество, озвучка, субтитры */
   /* Выбранное качество (высота кадра); 0 — авто. На iPad mini 1 (A5) разумный максимум — 720/1080 H.264 */
-  function wantHeight() { var q = TV.settings.ytQuality; return q === 'auto' ? 0 : parseInt(q, 10) || 720; }
+  function wantHeight() {
+    var q = TV.settings.ytQuality, h = q === 'auto' ? 0 : parseInt(q, 10) || 720;
+    return TV.slowNet() ? (h ? Math.min(h, 360) : 360) : h;     // медленный интернет — не выше 360p
+  }
 
   /* В iOS-приложении встроенный HLS-плеер не даёт выбрать качество и озвучку из JavaScript,
      поэтому видео YouTube идёт через локальный сервер приложения (ios/src/main.m, TVLocalServer):
@@ -390,6 +393,9 @@
     var item = function (kind, val, label, on) {
       return '<button class="p-opt' + (on ? ' on' : '') + '" data-p="opt:' + kind + ':' + TV.esc(val) + '">' + TV.esc(label) + '</button>';
     };
+    h += '<button class="p-opt broken" data-p="broken">⚠ Не работает — переключить</button>';
+    h += '<h4>Таймер сна' + (sleepAt ? ' · осталось ' + Math.max(1, Math.round((sleepAt - TV.now()) / 60000)) + ' мин' : '') + '</h4>';
+    TV.each([0, 30, 60, 90], function (m) { h += item('sleep', String(m), m ? m + ' мин' : 'Выкл', m ? sleepMin === m && !!sleepAt : !sleepAt); });
     var heights = (t && t.heights.length ? t.heights : [1080, 720, 480, 360]);
     h += '<h4>Качество</h4>' + item('q', 'auto', 'Авто', s.ytQuality === 'auto');
     TV.each(heights, function (x) { if (x >= 240 && x <= 1080) h += item('q', String(x), x + 'p' + (x >= 720 ? ' HD' : ''), String(s.ytQuality) === String(x)); });
@@ -406,6 +412,36 @@
     var o = $('.p-opts'); o.innerHTML = h; o.className = 'p-opts open';
     showUi(true);
   }
+  /* Таймер сна (1.4.0): через 30/60/90 минут — пауза и выход из плеера (экран может погаснуть) */
+  var sleepT = null, sleepAt = 0, sleepMin = 0;
+  function setSleep(min) {
+    clearTimeout(sleepT); sleepAt = 0; sleepMin = min;
+    if (!min) { TV.toast('Таймер сна выключен'); return; }
+    sleepAt = TV.now() + min * 60000;
+    sleepT = setTimeout(function () {
+      sleepAt = 0;
+      if (!P.isOpen()) return;
+      try { video.pause(); } catch (e) {}
+      P.close();
+      TV.awake(false);
+    }, min * 60000);
+    TV.toast('🌙 Выключится через ' + min + ' мин');
+  }
+
+  /* «Не работает» (1.4.0): одна кнопка вместо поиска причин — канал: этот источник помечается
+     нерабочим и включается следующий, а если источников больше нет — следующий канал; видео — ещё раз */
+  function broken() {
+    if (!state) return;
+    if (state.isCh && state.variants.length) {
+      TV.health.mark(state.variants[state.vi].u, false);
+      if (state.vi + 1 < state.variants.length) { state.vi++; TV.toast('Пробую другой источник…'); tryVariant(); return; }
+      TV.emit('health');
+      if (state.items.length > 1) { TV.toast('Источников больше нет — следующий канал'); P.step(1); return; }
+      showError('Канал сейчас не отвечает ни по одному источнику.', true); return;
+    }
+    state.started = false; state.vi = 0; TV.toast('Перезапускаю…'); playCurrent();
+  }
+
   function closeOpts() { var o = $('.p-opts'); if (o) o.className = 'p-opts'; scheduleHide(); }
 
   function resolveItem(it, cb) {
@@ -554,7 +590,7 @@
       hls = new Hls({
         // для видео YouTube качество задаёт пользователь (меню ⚙), не размер окна
         // телеканалы и лёгкий режим стартуют с самого лёгкого качества — первый кадр быстрее, дальше ABR повышает
-        startLevel: (lite || state.isCh) && !yt ? 0 : -1, capLevelToPlayerSize: !yt, maxBufferLength: lite ? 10 : 30,
+        startLevel: (lite || state.isCh || TV.slowNet()) && !yt ? 0 : -1, capLevelToPlayerSize: !yt, maxBufferLength: lite ? 10 : 30,
         maxMaxBufferLength: lite ? 20 : 60, backBufferLength: lite ? 5 : 30, enableWorker: !lite,
         manifestLoadingTimeOut: 8000, manifestLoadingMaxRetry: 1, levelLoadingTimeOut: 8000, fragLoadingTimeOut: 15000,
         abrEwmaDefaultEstimate: lite ? 300000 : 1000000,
@@ -568,9 +604,9 @@
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
         if (state) state.alive = true;          // источник ответил — «гонка» его не бросит, он просто подгружается
         if (yt) { applyHlsJs(); playSafe(); return; }
-        if (lite && hls.levels) {          // в лёгком режиме — не выше 480p (телеканалы)
-          var cap = -1;
-          TV.each(hls.levels, function (l, i) { if (!l.height || l.height <= 480) cap = i; });
+        if ((lite || TV.slowNet()) && hls.levels) {   // лёгкий режим — не выше 480p, медленный интернет — 360p
+          var cap = -1, maxH = TV.slowNet() ? 360 : 480;
+          TV.each(hls.levels, function (l, i) { if (!l.height || l.height <= maxH) cap = i; });
           if (cap >= 0) hls.autoLevelCapping = cap;
         }
         playSafe();
@@ -818,6 +854,8 @@
     if (!b) { if (!inPanel) P.toggleUi(); return; }
     var a = b.getAttribute('data-p');
     if (a === 'sideclose') { $('.p-side').className = 'p-side'; scheduleHide(); return; }
+    if (a.indexOf('opt:sleep:') === 0) { setSleep(parseInt(a.slice(10), 10) || 0); openOpts(); return; }
+    if (a === 'broken') { closeOpts(); broken(); return; }
     if (a.indexOf('opt:') === 0) { var parts = a.split(':'); setTrackOption(parts[1], parts.slice(2).join(':')); return; }
     if (a === 'opts') { openOpts(); return; }
     if (a === 'guide') { openGuide(); return; }

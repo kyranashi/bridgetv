@@ -301,10 +301,16 @@ TV.defaults = {
   nextEp: true,          // в конце видео/серии — следующее через 5 с
   font: '100',           // размер текста: 100 | 115 | 130 (%)
   kids: false,           // детский режим (родительский контроль): только детское
-  pin: ''                // PIN родительского контроля (4 цифры), хранится только на устройстве
+  pin: '',               // PIN родительского контроля (4 цифры), хранится только на устройстве
+  slowNet: false         // медленный интернет (1.4.0): качество не выше 360p — меньше остановок
 };
 TV.settings = TV.extend(TV.extend({}, TV.defaults), TV.store.get('settings', {}));
 TV.saveSettings = function () { TV.store.set('settings', TV.settings); TV.applyMode(); };
+/* Медленный интернет: включён вручную или система сама сообщает о 2G / экономии трафика */
+TV.slowNet = function () {
+  var c = navigator.connection;
+  return !!(TV.settings.slowNet || (c && (c.saveData || /2g/.test(c.effectiveType || ''))));
+};
 TV.lite = function () { return TV.settings.mode === 'lite' || (TV.settings.mode === 'auto' && TV.device.old); };
 TV.applyMode = function () {
   var c = document.documentElement.className.replace(/\s*(lite|tvmode|touch|font115|font130|kids)\b/g, '');

@@ -436,3 +436,6 @@ html.lite .big-cont { display: block; width: 100%; margin: 4px 0 14px; padding: 
 html.lite .big-cont .ic { width: 20px; height: 20px; vertical-align: -3px; }
 @media (max-width: 520px) { html.lite .grid.chs.big .card.ch { width: calc(100% - 10px); } }
 @media (min-width: 900px) { html.lite .grid.chs.big .card.ch { width: calc(33.333% - 10px); } }
+
+/* «Не работает» в меню плеера (1.4.0) — заметная кнопка во всю ширину */
+.p-opt.broken { display: block; width: 100%; margin: 4px 0 10px; background: #7a2632; color: #fff; text-align: left; }
