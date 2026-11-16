@@ -518,7 +518,33 @@
   var fm = { q: '', genre: 'all', years: 'all', kind: 'film', studio: '' };
   function fmActive() { return !!(fm.q || fm.genre !== 'all' || fm.years !== 'all'); }
   var MV_SHELVES = ['action', 'comedy', 'thriller', 'scifi', 'horror', 'drama', 'family', 'anime', 'romance', 'doc', 'sport', 'war', 'classic'];
+  /* Простой режим (1.4.0): то, что точно играет на старой технике — киноканалы с названием фильма
+     в эфире (одно нажатие — смотреть) и бесплатные старые фильмы mp4 (общественное достояние). */
+  function simpleMovies() {
+    var all = TV.catalog.list({ region: TV.settings.region, onlyWorking: TV.settings.onlyWorking });
+    var kino = TV.filter(all, function (c) { return c.c === 'movies' && !TV.blocked(c); });
+    var on = TV.filter(kino, function (c) { return !!(TV.epg && TV.epg.now(c.id)); });
+    kino = on.concat(TV.filter(kino, function (c) { return !(TV.epg && TV.epg.now(c.id)); })).slice(0, 20);
+    var h = '<div class="sec-h"><h3>📺 Кино по ТВ — сейчас в эфире</h3><i>' + kino.length + '</i></div>';
+    h += kino.length ? '<div class="grid chs big">' + (function () { var s = ''; reg('kino', kino); TV.each(kino, function (c, i) { s += chCard(c, 'kino', i); }); return s; })() + '</div>'
+      : empty('Киноканалы не найдены. Ещё → Обновить каталог.');
+    TV.each(archList(), function (s) { h += placeholder('sarch-' + s.id, s.title); });
+    return { title: '🎬 Фильмы', html: h, after: function () {
+      var i = 0, list = archList(), shown = {};
+      (function next() {
+        if (i >= list.length || tab !== 'movies' || stacks.movies.length > 1) return;
+        var s = list[i++];
+        cached('ar:' + s.id, function (cb) { TV.arch.query(s.q, 40, cb, s.sort); }, function (err, items) {
+          var vids = TV.filter(items || [], function (x) { var t = 't:' + TV.norm(x.n || ''); if (shown[x.id] || shown[t]) return false; shown[x.id] = shown[t] = 1; return true; }).slice(0, 12);
+          fill('sarch-' + s.id, err || !vids.length ? '' : '<div class="sec-h"><h3>' + esc(s.title) + ' · бесплатно</h3></div>' + grid(vids, 'sar-' + s.id, 'vs'));
+          next();
+        });
+      })();
+    } };
+  }
+
   S.movies = function () {
+    if (TV.lite()) return simpleMovies();
     var h = '<form class="sbar" data-form="fmsearch" action="#"><input type="search" name="q" autocomplete="off" autocorrect="off" ' +
       'placeholder="Найти фильм: название или режиссёр" value="' + esc(fm.q) + '"><button class="sbtn" type="submit">Найти</button></form>';
     // Фильтры: кнопки «Жанр ▾» и «Год ▾» открывают окно выбора (S.mvfilter); ниже — прокручиваемый ряд жанров
@@ -1347,7 +1373,7 @@
     if (tab === 'yt' && (!TV.settings.showYT || TV.yt.mode() === 'none')) tab = 'tv';
     if (TV.lite() && SIMPLE_HIDE[tab]) tab = 'tv';
   }
-  var SIMPLE_HIDE = { search: 1, yt: 1, movies: 1 };
+  var SIMPLE_HIDE = { search: 1, yt: 1 };
 
   /* Простой режим в приложении: сразу включить последний канал (как обычный телевизор) */
   function autoplayLast() {
