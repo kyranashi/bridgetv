@@ -66,7 +66,7 @@
     }, false);
 
     video.addEventListener('playing', onPlaying, false);
-    video.addEventListener('loadedmetadata', function () { if (!hls) applyMediaTracks(); }, false);
+    video.addEventListener('loadedmetadata', function () { if (state) state.alive = true; if (!hls) applyMediaTracks(); }, false);
     video.addEventListener('waiting', function () { if (state && state.started) busy(true, 'Буферизация…'); }, false);
     video.addEventListener('error', function () { fail('ошибка воспроизведения'); }, false);
     video.addEventListener('timeupdate', onTime, false);
@@ -426,7 +426,7 @@
       url = url.replace(/^http:/i, 'https:');
     }
     state.url = url;
-    state.altTried = false; state.mediaRecovered = false;
+    state.altTried = false; state.mediaRecovered = false; state.alive = false;
     var tot = state.variants.length;
     busy(true, state.isCh ? 'Подключаюсь' + (tot > 1 ? ' · источник ' + (state.vi + 1) + ' из ' + tot : '') + '…' : 'Загрузка…');
     load(url, v.h);
@@ -434,6 +434,36 @@
     var sec = TV.settings.timeout || 12;
     if (TV.lite()) sec += 4;
     srcT = setTimeout(function () { if (state && !state.started) fail('таймаут ' + sec + ' с'); }, sec * 1000);
+    if (state.isCh) raceNext();
+  }
+
+  /* Быстрый старт (1.4.0): пока грузится текущий источник, в фоне проверяем плейлисты следующих двух
+     (маленький текстовый файл, не видео). Если текущий за 4 с (лёгкий режим — 6 с) не заиграл,
+     а другой уже ответил настоящим плейлистом, — переходим на ответивший, не дожидаясь таймаута.
+     Где проверка невозможна (CORS в браузере), всё работает как раньше — по таймауту. */
+  var raceT = null;
+  function raceNext() {
+    clearTimeout(raceT);
+    var st = state, from = st.vi, cand = st.variants.slice(from + 1, from + 3), ready = -1;
+    if (!cand.length || !TV.settings.autoNext) return;
+    TV.each(cand, function (v, k) {
+      if (!/^https?:/i.test(v.u) || (location.protocol === 'https:' && /^http:/i.test(v.u))) return;
+      TV.ajax(v.u, { text: true, timeout: 6000 }, function (err, text) {
+        if (state !== st || err || ready >= 0 || !/#EXTM3U/.test(String(text || '').slice(0, 2000))) return;
+        ready = from + 1 + k;
+      });
+    });
+    raceT = setTimeout(function check() {
+      if (state !== st || st.started || st.vi !== from || st.alive) return;   // заиграл или уже ответил — не переключаем
+      if (ready < 0) { raceT = setTimeout(check, 1000); return; }      // ещё никто не ответил — ждём дальше (таймаут как был)
+      clearTimeout(srcT);
+      // текущий не мёртвый, а медленный: ставим его сразу ПОСЛЕ ответившего — если тот не заиграет,
+      // плеер вернётся к нему, а не уйдёт дальше по списку
+      var slow = st.variants.splice(from, 1)[0];
+      st.variants.splice(ready, 0, slow);
+      st.vi = ready - 1;
+      tryVariant();
+    }, (TV.lite() ? 6 : 4) * 1000);
   }
 
   function fail(why) {
@@ -522,7 +552,8 @@
       var lite = TV.lite(), yt = !state.isCh && cur() && cur().k === 'yt';
       hls = new Hls({
         // для видео YouTube качество задаёт пользователь (меню ⚙), не размер окна
-        startLevel: lite && !yt ? 0 : -1, capLevelToPlayerSize: !yt, maxBufferLength: lite ? 10 : 30,
+        // телеканалы и лёгкий режим стартуют с самого лёгкого качества — первый кадр быстрее, дальше ABR повышает
+        startLevel: (lite || state.isCh) && !yt ? 0 : -1, capLevelToPlayerSize: !yt, maxBufferLength: lite ? 10 : 30,
         maxMaxBufferLength: lite ? 20 : 60, backBufferLength: lite ? 5 : 30, enableWorker: !lite,
         manifestLoadingTimeOut: 8000, manifestLoadingMaxRetry: 1, levelLoadingTimeOut: 8000, fragLoadingTimeOut: 15000,
         abrEwmaDefaultEstimate: lite ? 300000 : 1000000,
@@ -534,6 +565,7 @@
         hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, applyHlsJs);
       }
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        if (state) state.alive = true;          // источник ответил — «гонка» его не бросит, он просто подгружается
         if (yt) { applyHlsJs(); playSafe(); return; }
         if (lite && hls.levels) {          // в лёгком режиме — не выше 480p (телеканалы)
           var cap = -1;
