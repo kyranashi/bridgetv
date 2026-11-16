@@ -197,6 +197,27 @@
     return '<button class="link" data-a="scan" id="scanbar">🔄 Проверить каналы</button>';
   }
 
+  /* Простой режим (1.4.0, старая техника): без полок, фильтров и категорий — крупные плитки главных
+     каналов и одна кнопка «Продолжить». Весь список — «Все каналы ›». */
+  function simpleTv(region, prim, hist) {
+    var pills = [];
+    TV.each(prim, function (r) { pills.push({ id: r.id, name: r.flag + ' ' + r.name }); });
+    var h = prim.length > 1 ? chips(pills, region, 'region') : '';
+    var l = 'tv-' + region, all = TV.catalog.list({ region: region, onlyWorking: TV.settings.onlyWorking });
+    reg(l, all);
+    if (hist.length) {
+      var last = hist[0], li = -1;
+      TV.each(all, function (c, i) { if (li < 0 && c.id === last.id) li = i; });
+      if (li >= 0) h += '<button class="btn primary big-cont" data-a="play" data-l="' + l + '" data-i="' + li + '">' +
+        TV.icon('play') + ' Продолжить: ' + esc(last.n) + '</button>';
+    }
+    h += '<div class="grid chs big">';
+    for (var i = 0; i < all.length && i < 40; i++) h += chCard(all[i], l, i);
+    h += '</div>';
+    if (all.length > 40) h += '<button class="more-btn" data-a="go" data-x="tv/region:' + esc(region) + '">Все каналы (' + all.length + ') ›</button>';
+    return all.length ? h : h + empty('Здесь пока нет рабочих каналов.<br>Ещё → Обновить каталог.');
+  }
+
   S.tv = function () {
     var cat = TV.catalog.get();
     var prim = TV.catalog.primary();
@@ -210,6 +231,11 @@
     // Продолжить просмотр
     if (TV.settings.kids) h = '<div class="kids-bar"><b>🧸 Детский режим</b><button class="btn" data-a="kidsExit">Выйти (PIN)</button></div>' + h;
     var hist = TV.filter(TV.history.all(), function (x) { return x.k === 'ch' && TV.catalog.byId(x.id) && !TV.blocked(TV.catalog.byId(x.id)); });
+    if (TV.lite() && region !== 'all') {
+      h = (TV.settings.kids ? '<div class="kids-bar"><b>🧸 Детский режим</b><button class="btn" data-a="kidsExit">Выйти (PIN)</button></div>' : '') + simpleTv(region, prim, hist);
+      if (!cat.channels.length) h = empty('Каталог каналов не загрузился.<br>Ещё → Обновить каталог.', '⚠️');
+      return { title: TV.APP_NAME, html: h };
+    }
     if (hist.length) {
       var hc = []; TV.each(hist.slice(0, 12), function (x) { hc.push(TV.catalog.byId(x.id)); });
       h += shelf('▶ Продолжить', hc, 'hist');
@@ -1314,10 +1340,25 @@
     TV.each(TABS, function (t) {
       // «Видео» прячем и там, где оно не может работать (старая iOS без своего зеркала)
       if (t.id === 'yt' && (!TV.settings.showYT || TV.yt.mode() === 'none')) return;
+      if (TV.lite() && SIMPLE_HIDE[t.id]) return;      // простой режим — только главное
       tb += '<button data-a="tab" data-x="' + t.id + '"><span>' + TV.icon(t.icon) + '</span>' + t.name + '</button>';
     });
     document.getElementById('tabbar').innerHTML = tb;
     if (tab === 'yt' && (!TV.settings.showYT || TV.yt.mode() === 'none')) tab = 'tv';
+    if (TV.lite() && SIMPLE_HIDE[tab]) tab = 'tv';
+  }
+  var SIMPLE_HIDE = { search: 1, yt: 1, movies: 1 };
+
+  /* Простой режим в приложении: сразу включить последний канал (как обычный телевизор) */
+  function autoplayLast() {
+    if (!TV.lite() || !TV.native || TV.player.isOpen() || TV.settings.kids) return;
+    var x = TV.find(TV.history.all(), function (h) { return h.k === 'ch'; });
+    var c = x && TV.catalog.byId(x.id);
+    if (!c || TV.blocked(c)) return;
+    var all = lists['tv-' + TV.settings.region] || [c], i = -1;
+    TV.each(all, function (it, k) { if (i < 0 && it.id === c.id) i = k; });
+    if (i < 0) { all = [c]; i = 0; }
+    TV.player.open(all, i);
   }
 
   /* ================================================================ запуск */
@@ -1348,6 +1389,7 @@
       TV.settings[k] = k === 'timeout' ? parseInt(v, 10) : v;
       TV.saveSettings();
       if (k === 'ytInstance' || k === 'ytKey' || k === 'ytSource') { cache = {}; yv.res = null; }
+      if (k === 'mode') buildTabs();
       if (k === 'mode' || k === 'font') render(true);
       TV.toast('Сохранено');
     }, false);
@@ -1388,7 +1430,8 @@
       if (bar) bar.outerHTML = scanButton();
     });
     render();
-    TV.yt.discover();
+    setTimeout(autoplayLast, 600);
+    if (!TV.lite()) TV.yt.discover();
     autoUpdate();
   };
 })();

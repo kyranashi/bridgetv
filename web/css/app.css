@@ -427,3 +427,12 @@ html.lite .pbtn { min-width: 52px; min-height: 52px; }
 html.lite #tabbar button { font-size: 13px; }
 /* 1.4.0: страница сериала — широкая обложка */
 .film-p.wide { width: 320px; max-width: 46%; }
+
+/* Простой режим (1.4.0): крупные плитки каналов в 2 колонки, большая кнопка «Продолжить» */
+html.lite .grid.chs.big .card.ch { width: calc(50% - 10px); min-height: 84px; }
+html.lite .grid.chs.big .card.ch .nm { font-size: 18px; }
+html.lite .grid.chs.big .card.ch .num { font-size: 16px; }
+html.lite .big-cont { display: block; width: 100%; margin: 4px 0 14px; padding: 18px; font-size: 19px; text-align: left; }
+html.lite .big-cont .ic { width: 20px; height: 20px; vertical-align: -3px; }
+@media (max-width: 520px) { html.lite .grid.chs.big .card.ch { width: calc(100% - 10px); } }
+@media (min-width: 900px) { html.lite .grid.chs.big .card.ch { width: calc(33.333% - 10px); } }
