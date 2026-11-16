@@ -151,7 +151,7 @@ TV.ajax = function (url, opts, cb) {
       try { j = JSON.parse(text); } catch (e) { return cb('ответ не JSON'); }
       cb(null, j);
     };
-    TV.callNative({ cmd: 'fetch', id: id, url: url, timeout: opts.timeout || 15000, method: opts.method || 'GET', body: opts.body || null });
+    TV.callNative({ cmd: 'fetch', id: id, url: url, timeout: opts.timeout || 15000, method: opts.method || 'GET', body: opts.body || null, bg: !!opts.bg });
     return null;
   }
   var x = new XMLHttpRequest(), done = false;

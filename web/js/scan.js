@@ -32,7 +32,7 @@
   /* cb(true | false | null). null — проверить нельзя (нет интернета): ничего не помечаем */
   function probe(url, cb) {
     if (navigator.onLine === false) { cb(null); return; }
-    TV.ajax(url, { text: true, timeout: TV.lite() ? 9000 : 7000 }, function (err, text) {
+    TV.ajax(url, { text: true, bg: true, timeout: TV.lite() ? 9000 : 7000 }, function (err, text) {
       if (err === 'нет интернета') { cb(null); return; }
       var ok = !err && /^\s*(﻿)?#EXTM3U/.test(String(text || ''));
       // Заглушки «вещание недоступно в вашем регионе» обычно — короткий плейлист без потоков
@@ -56,7 +56,7 @@
   }
 
   function pump() {
-    var par = TV.lite() ? 3 : 6;
+    var par = TV.lite() ? 1 : 2;          // мягко (1.4.0): не мешать плееру и слабому интернету
     if (!running) return;
     if (offline) {                       // нет интернета: прервать, отметки не трогать
       queue = [];
@@ -104,7 +104,8 @@
   };
   S.stop = function () { queue = []; if (running && active === 0) { running = false; TV.emit('scan', S.progress()); } };
 
-  /* Автоматически: раз в сутки и после обновления каталога, через 20 с после запуска */
+  /* Автоматически: раз в сутки и после обновления каталога, через 2 минуты после запуска,
+     только главные каналы (первые 80 по номерам); весь список — кнопкой «Проверить каналы» */
   S.auto = function () {
     if (!S.available()) return;
     var cat = TV.catalog.get();
@@ -112,10 +113,13 @@
     var stale = TV.now() - S.lastTime() > DAY || TV.store.get('scanVer', '') !== ver;
     if (!stale) return;
     setTimeout(function () {
-      S.start(null, function (p) {
+      var main = TV.filter(TV.catalog.get().channels, function (c) {
+        return TV.catalog.isPrimaryRegion(c.r) && !TV.blocked(c);
+      }).sort(function (a, b) { return (a.num || 999) - (b.num || 999); }).slice(0, 80);
+      S.start(main, function (p) {
         TV.store.set('scanVer', ver);
         TV.toast('Каналы проверены: работает ' + p.ok + ' из ' + p.total);
       });
-    }, 20000);
+    }, 120000);
   };
 })();

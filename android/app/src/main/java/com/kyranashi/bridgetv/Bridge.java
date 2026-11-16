@@ -57,6 +57,8 @@ public class Bridge {
     private final Activity act;
     private final WebView web;
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
+    // Фоновая проверка каналов (bg) — своя очередь, чтобы плеер и данные не ждали её (1.4.0)
+    private final ExecutorService bgPool = Executors.newFixedThreadPool(2);
     private final File storeDir, dlDir;
     private SSLSocketFactory ssl;
 
@@ -125,7 +127,7 @@ public class Bridge {
         final JSONObject m;
         try { m = new JSONObject(json); } catch (Exception e) { return; }
         String cmd = m.optString("cmd");
-        if ("fetch".equals(cmd)) pool.execute(new Runnable() { public void run() { fetch(m); } });
+        if ("fetch".equals(cmd)) (m.optBoolean("bg") ? bgPool : pool).execute(new Runnable() { public void run() { fetch(m); } });
         else if ("save".equals(cmd)) save(m.optString("key"), m.isNull("value") ? null : m.optString("value"));
         else if ("awake".equals(cmd)) awake(m.optBoolean("on"));
         else if ("ytwin".equals(cmd) && act instanceof MainActivity) {     // поиск/видео на сайте YouTube — окно приложения

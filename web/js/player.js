@@ -538,7 +538,8 @@
     stop();
     var isHls = isHlsUrl(url);
     var useHlsJs = isHls && TV.device.mse && (force === 'hlsjs' ||
-      (!force && (!TV.device.nativeHls || (state.preferHlsJs && !TV.device.ios))));
+      (!force && (!TV.device.nativeHls || TV.device.android || (state.preferHlsJs && !TV.device.ios))));
+    // Android (1.4.0): системный плеер WebView медленно стартует и зависает на Xiaomi/Honor — hls.js быстрее
     state.engine = useHlsJs ? 'hlsjs' : 'native';
     if (!useHlsJs) {
       video.src = url;
