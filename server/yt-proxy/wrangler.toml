@@ -1,0 +1,9 @@
+# BridgeTV — общий поиск YouTube (docs/YT_PROXY.md). Ключ — только секретом: npx wrangler secret put YT_KEY
+name = "bridgetv-yt"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+# Журналы запросов не включаем (см. абзац для Политики в docs/YT_PROXY.md)
+[observability]
+enabled = false

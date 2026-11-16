@@ -85,7 +85,9 @@
   function apiCached(key, url, cb) {
     var c = TV.store.get('ytc_' + key, null);
     if (c && TV.now() - c.t < 6 * 3600e3) return cb(null, c.v);
-    TV.ajax(url + '&key=' + enc(TV.settings.ytKey), { timeout: 15000 }, function (err, j) {
+    // свой ключ — напрямую; без ключа — через общий сервер приложения (TV.YT_PROXY), ключ там, а не на устройстве
+    var full = TV.settings.ytKey ? url + '&key=' + enc(TV.settings.ytKey) : url.replace(API, TV.YT_PROXY);
+    TV.ajax(full, { timeout: 15000 }, function (err, j) {
       if (err) return cb(/403/.test(err) ? 'ключ YouTube API не подходит или исчерпан на сегодня' : err);
       TV.store.set('ytc_' + key, { t: TV.now(), v: j });
       cb(null, j);
@@ -153,7 +155,7 @@
       return mirror ? 'mirror' : 'none';
     },
     embedOk: embedOk,
-    hasKey: function () { return !!TV.settings.ytKey; },
+    hasKey: function () { return !!(TV.settings.ytKey || TV.YT_PROXY); },
     /* Можно ли искать: зеркало, ключ API */
     canSearch: function () { var m = TV.yt.mode(); return m === 'mirror' || (m === 'official' && TV.yt.hasKey()); },
     current: function () { return mirrorList()[0] || null; },

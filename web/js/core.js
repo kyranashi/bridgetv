@@ -18,6 +18,9 @@ TV.PAGES = 'https://kyranashi.github.io/bridgetv';
 /* Свой адрес сайта (docs/SITE.md): когда домен подключён, TV.PAGES = 'https://<домен>'. Старый адрес
    GitHub Pages сам перенаправляет на новый, поэтому плееру YouTube доверяем обоим. */
 TV.PAGES_ORIGINS = ['https://kyranashi.github.io'];
+/* Общий поиск YouTube без своего ключа (1.4.0, docs/YT_PROXY.md): адрес своего сервера Cloudflare Worker
+   (server/yt-proxy), который ходит в официальный YouTube Data API со своим ключом. Пусто — выключено. */
+TV.YT_PROXY = '';
 
 /* Нативная оболочка (iOS-приложение) сообщает о себе через window.TV_NATIVE */
 /* Android-оболочка (android/, с 0.2.5): мост window.TVAndroid — данные о приложении и сохранённое
