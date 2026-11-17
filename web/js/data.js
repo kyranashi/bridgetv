@@ -290,10 +290,13 @@
      Держим только в памяти (≈1 МБ — в localStorage старого iPad не поместится вместе с каталогом)
      и перезагружаем раз в 6 часов. */
   var EPG = null, epgT = 0, epgBusy = false;
+  /* Простой режим (1.4.0): облегчённая программа (главные, кино и детские каналы — в 2,5 раза меньше), с запасом — полная */
   function epgSources() {
-    var s = [];
-    if (/^https?:/.test(location.protocol)) s.push('../data/epg.json');     // свой сервер / GitHub Pages
-    if (TV.PAGES) s.push(TV.PAGES + '/data/epg.json');
+    var s = [], f = TV.lite() ? ['epg-lite.json', 'epg.json'] : ['epg.json'];
+    TV.each(f, function (n) {
+      if (/^https?:/.test(location.protocol)) s.push('../data/' + n);     // свой сервер / GitHub Pages
+      if (TV.PAGES) s.push(TV.PAGES + '/data/' + n);
+    });
     return s;
   }
   TV.epg = {

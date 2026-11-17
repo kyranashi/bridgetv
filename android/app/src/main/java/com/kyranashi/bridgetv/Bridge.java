@@ -57,6 +57,8 @@ public class Bridge {
     private final Activity act;
     private final WebView web;
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
+    // Фоновая проверка каналов (bg) — своя очередь, чтобы плеер и данные не ждали её (1.4.0)
+    private final ExecutorService bgPool = Executors.newFixedThreadPool(2);
     private final File storeDir, dlDir;
     private SSLSocketFactory ssl;
 
@@ -99,6 +101,15 @@ public class Bridge {
         } catch (Exception e) { return "{\"platform\":\"android\"}"; }
     }
 
+    /** Канал, с которым приложение открыли из «Продолжить» Android TV (один раз; пусто — обычный запуск) */
+    @JavascriptInterface
+    public String startCh() {
+        if (!(act instanceof MainActivity)) return "";
+        String c = ((MainActivity) act).pendingCh;
+        ((MainActivity) act).pendingCh = null;
+        return c != null ? c : "";
+    }
+
     @JavascriptInterface
     public String saved() {
         JSONObject o = new JSONObject();
@@ -125,9 +136,17 @@ public class Bridge {
         final JSONObject m;
         try { m = new JSONObject(json); } catch (Exception e) { return; }
         String cmd = m.optString("cmd");
-        if ("fetch".equals(cmd)) pool.execute(new Runnable() { public void run() { fetch(m); } });
+        if ("fetch".equals(cmd)) (m.optBoolean("bg") ? bgPool : pool).execute(new Runnable() { public void run() { fetch(m); } });
         else if ("save".equals(cmd)) save(m.optString("key"), m.isNull("value") ? null : m.optString("value"));
         else if ("awake".equals(cmd)) awake(m.optBoolean("on"));
+        else if ("watchnext".equals(cmd)) {
+            final String id = m.optString("id"), title = m.optString("title"), img = m.optString("img");
+            bgPool.execute(new Runnable() { public void run() { WatchNext.publish(act, id, title, img); } });
+        }
+        else if ("ytwin".equals(cmd) && act instanceof MainActivity) {     // поиск/видео на сайте YouTube — окно приложения
+            final String u = m.optString("url");
+            if (MainActivity.ytAllowed(u)) act.runOnUiThread(new Runnable() { public void run() { ((MainActivity) act).openYouTube(u); } });
+        }
         else if ("voice".equals(cmd) && act instanceof MainActivity) {
             act.runOnUiThread(new Runnable() { public void run() { ((MainActivity) act).startVoice(); } });
         }

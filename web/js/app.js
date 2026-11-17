@@ -16,9 +16,9 @@
 (function () {
   var A = TV.app = {};
   var TABS = [
-    { id: 'tv', icon: '📺', name: 'ТВ' }, { id: 'search', icon: '🔍', name: 'Поиск' },
-    { id: 'yt', icon: '▶️', name: 'Видео' }, { id: 'movies', icon: '🎬', name: 'Фильмы' },
-    { id: 'fav', icon: '⭐', name: 'Избранное' }, { id: 'more', icon: '☰', name: 'Ещё' }
+    { id: 'tv', icon: 'tv', name: 'ТВ' }, { id: 'search', icon: 'search', name: 'Поиск' },
+    { id: 'yt', icon: 'play', name: 'Видео' }, { id: 'movies', icon: 'film', name: 'Фильмы' },
+    { id: 'fav', icon: 'star', name: 'Избранное' }, { id: 'more', icon: 'menu', name: 'Ещё' }
   ];
   var tab = 'tv';
   var stacks = {};
@@ -91,8 +91,15 @@
       '<span class="th"><img loading="lazy" src="' + esc(it.img) + '" alt="" onerror="this.style.display=\'none\'"></span>' +
       '<span class="t">' + esc(it.n) + '</span><span class="s">' + esc(it.sub || '') + '</span></button>';
   }
+  /* Сериал одной карточкой (1.4.0) — открывает список серий */
+  function serCard(it) {
+    return '<button class="card v" data-a="series" data-x="' + esc(it.id) + '">' +
+      '<span class="th">' + (it.img ? '<img loading="lazy" src="' + esc(it.img) + '" alt="" onerror="this.style.display=\'none\'">' : '') + '</span>' +
+      '<span class="t">' + esc(it.n) + '</span><span class="s">' + esc(it.sub || '') + '</span></button>';
+  }
   function card(it, l, i) {
-    if (it.k === 'mv') return mvCard(it); return it.v || it.k === 'ch' && TV.catalog.byId(it.id) ? chCard(it.v ? it : TV.catalog.byId(it.id), l, i) : vCard(it, l, i); }
+    if (it.k === 'mv') return mvCard(it);
+    if (it.k === 'rts') return serCard(it); return it.v || it.k === 'ch' && TV.catalog.byId(it.id) ? chCard(it.v ? it : TV.catalog.byId(it.id), l, i) : vCard(it, l, i); }
 
   function grid(items, l, cls) {
     reg(l, items);
@@ -190,6 +197,27 @@
     return '<button class="link" data-a="scan" id="scanbar">🔄 Проверить каналы</button>';
   }
 
+  /* Простой режим (1.4.0, старая техника): без полок, фильтров и категорий — крупные плитки главных
+     каналов и одна кнопка «Продолжить». Весь список — «Все каналы ›». */
+  function simpleTv(region, prim, hist) {
+    var pills = [];
+    TV.each(prim, function (r) { pills.push({ id: r.id, name: r.flag + ' ' + r.name }); });
+    var h = prim.length > 1 ? chips(pills, region, 'region') : '';
+    var l = 'tv-' + region, all = TV.catalog.list({ region: region, onlyWorking: TV.settings.onlyWorking });
+    reg(l, all);
+    if (hist.length) {
+      var last = hist[0], li = -1;
+      TV.each(all, function (c, i) { if (li < 0 && c.id === last.id) li = i; });
+      if (li >= 0) h += '<button class="btn primary big-cont" data-a="play" data-l="' + l + '" data-i="' + li + '">' +
+        TV.icon('play') + ' Продолжить: ' + esc(last.n) + '</button>';
+    }
+    h += '<div class="grid chs big">';
+    for (var i = 0; i < all.length && i < 40; i++) h += chCard(all[i], l, i);
+    h += '</div>';
+    if (all.length > 40) h += '<button class="more-btn" data-a="go" data-x="tv/region:' + esc(region) + '">Все каналы (' + all.length + ') ›</button>';
+    return all.length ? h : h + empty('Здесь пока нет рабочих каналов.<br>Ещё → Обновить каталог.');
+  }
+
   S.tv = function () {
     var cat = TV.catalog.get();
     var prim = TV.catalog.primary();
@@ -203,6 +231,11 @@
     // Продолжить просмотр
     if (TV.settings.kids) h = '<div class="kids-bar"><b>🧸 Детский режим</b><button class="btn" data-a="kidsExit">Выйти (PIN)</button></div>' + h;
     var hist = TV.filter(TV.history.all(), function (x) { return x.k === 'ch' && TV.catalog.byId(x.id) && !TV.blocked(TV.catalog.byId(x.id)); });
+    if (TV.lite() && region !== 'all') {
+      h = (TV.settings.kids ? '<div class="kids-bar"><b>🧸 Детский режим</b><button class="btn" data-a="kidsExit">Выйти (PIN)</button></div>' : '') + simpleTv(region, prim, hist);
+      if (!cat.channels.length) h = empty('Каталог каналов не загрузился.<br>Ещё → Обновить каталог.', '⚠️');
+      return { title: TV.APP_NAME, html: h };
+    }
     if (hist.length) {
       var hc = []; TV.each(hist.slice(0, 12), function (x) { hc.push(TV.catalog.byId(x.id)); });
       h += shelf('▶ Продолжить', hc, 'hist');
@@ -351,10 +384,10 @@
     if (m === 'none') return '<section class="box"><h3>▶️ Видео на этом устройстве</h3><p class="note">Официальный плеер YouTube не поддерживает ' +
       'эту версию системы (' + esc(TV.device.label) + '). Можно подключить своё зеркало Invidious — тогда видео пойдут и здесь.</p>' +
       '<button class="btn primary" data-a="go" data-x="more/settings">Настройки → своё зеркало</button></section>';
-    if (m === 'official' && !TV.yt.hasKey()) return '<section class="box"><h3>🔑 Тренды и поиск YouTube</h3><p class="note">Видео играют в официальном ' +
-      'плеере YouTube. Для трендов, рубрик и поиска нужен бесплатный ключ YouTube API (5 минут, один раз) — без ключа доступны ' +
-      'подборки официальных каналов — новые мультфильмы и аниме' + (TV.native ? '' : ' (в приложении BridgeTV)') + ' и поиск на сайте YouTube.</p>' +
-      '<button class="btn primary" data-a="go" data-x="more/ytkey">Как получить ключ</button></section>';
+    // Без ключа всё основное работает (подборки, «Популярное»), поэтому — короткая строка, а не большой блок
+    if (m === 'official' && !TV.yt.hasKey()) return '<p class="note">Поиск открывает результаты на YouTube' +
+      (TV.platform === 'desktop' || TV.platform === 'android' ? ' (в окне приложения)' : '') +
+      '. Искать прямо здесь — с бесплатным ключом: <button class="link" data-a="go" data-x="more/ytkey">как получить</button>.</p>';
     return '';
   }
 
@@ -414,15 +447,22 @@
   function feedsList() {
     return TV.filter(TV.yt.feeds, function (f) { return TV.settings.kids ? f.id === 'kidsnew' : f.id !== 'new' && f.id !== 'classic'; });
   }
-  function archList() { return TV.settings.kids ? TV.filter(TV.arch.shelves, function (s) { return s.id === 'toons'; }) : TV.arch.shelves; }
+  function archList() {
+    if (TV.settings.kids) return TV.filter(TV.arch.shelves, function (s) { return s.id === 'toons'; });
+    return TV.lite() ? TV.arch.shelves.slice(0, 3) : TV.arch.shelves;   // лёгкий режим: новые поступления, мультфильмы, классика
+  }
   function ytSearchShelves() { return TV.settings.kids ? TV.filter(TV.yt.shelves, function (s) { return s.id === 'kids'; }) : TV.yt.shelves; }
   function ytShelves() {
     var m = TV.yt.mode();
     if (m === 'none') return [];
     var out = [];
-    // RSS-ленты официальных каналов — в приложении (без ключа) или через API (с ключом)
-    if (m === 'official' && (TV.native || TV.yt.hasKey())) TV.each(feedsList(), function (f) { out.push({ id: 'f-' + f.id, title: f.title, feed: f }); });
-    if (TV.yt.canSearch()) out = ytSearchShelves().concat(out);   // тренды YouTube — первыми
+    // Подборки официальных каналов — везде (готовые с сервера сборки, в приложениях ещё и RSS напрямую).
+    // Без ключа первым идёт «Популярное за 3 дня» — замена трендов.
+    if (m === 'official') {
+      if (!TV.yt.canSearch() && !TV.settings.kids) out.push({ id: 'f-trend', title: TV.yt.trendFeed.title, feed: TV.yt.trendFeed });
+      TV.each(feedsList(), function (f) { out.push({ id: 'f-' + f.id, title: f.title, feed: f }); });
+    }
+    if (TV.yt.canSearch()) out = ytSearchShelves().concat(out);   // с ключом — тренды YouTube первыми
     return out;
   }
   function loadYtShelves() {
@@ -475,10 +515,36 @@
   /* С 1.1.0 — каталог фильмов как в онлайн-кинотеатрах: постеры, жанры, годы, новые первыми;
      страница фильма с описанием, официальным трейлером и «Где смотреть». Только фильмы —
      видео YouTube сюда не подмешиваются (они на вкладке «Видео»). */
-  var fm = { q: '', genre: 'all', years: 'all' };
+  var fm = { q: '', genre: 'all', years: 'all', kind: 'film', studio: '' };
   function fmActive() { return !!(fm.q || fm.genre !== 'all' || fm.years !== 'all'); }
   var MV_SHELVES = ['action', 'comedy', 'thriller', 'scifi', 'horror', 'drama', 'family', 'anime', 'romance', 'doc', 'sport', 'war', 'classic'];
+  /* Простой режим (1.4.0): то, что точно играет на старой технике — киноканалы с названием фильма
+     в эфире (одно нажатие — смотреть) и бесплатные старые фильмы mp4 (общественное достояние). */
+  function simpleMovies() {
+    var all = TV.catalog.list({ region: TV.settings.region, onlyWorking: TV.settings.onlyWorking });
+    var kino = TV.filter(all, function (c) { return c.c === 'movies' && !TV.blocked(c); });
+    var on = TV.filter(kino, function (c) { return !!(TV.epg && TV.epg.now(c.id)); });
+    kino = on.concat(TV.filter(kino, function (c) { return !(TV.epg && TV.epg.now(c.id)); })).slice(0, 20);
+    var h = '<div class="sec-h"><h3>📺 Кино по ТВ — сейчас в эфире</h3><i>' + kino.length + '</i></div>';
+    h += kino.length ? '<div class="grid chs big">' + (function () { var s = ''; reg('kino', kino); TV.each(kino, function (c, i) { s += chCard(c, 'kino', i); }); return s; })() + '</div>'
+      : empty('Киноканалы не найдены. Ещё → Обновить каталог.');
+    TV.each(archList(), function (s) { h += placeholder('sarch-' + s.id, s.title); });
+    return { title: '🎬 Фильмы', html: h, after: function () {
+      var i = 0, list = archList(), shown = {};
+      (function next() {
+        if (i >= list.length || tab !== 'movies' || stacks.movies.length > 1) return;
+        var s = list[i++];
+        cached('ar:' + s.id, function (cb) { TV.arch.query(s.q, 40, cb, s.sort); }, function (err, items) {
+          var vids = TV.filter(items || [], function (x) { var t = 't:' + TV.norm(x.n || ''); if (shown[x.id] || shown[t]) return false; shown[x.id] = shown[t] = 1; return true; }).slice(0, 12);
+          fill('sarch-' + s.id, err || !vids.length ? '' : '<div class="sec-h"><h3>' + esc(s.title) + ' · бесплатно</h3></div>' + grid(vids, 'sar-' + s.id, 'vs'));
+          next();
+        });
+      })();
+    } };
+  }
+
   S.movies = function () {
+    if (TV.lite()) return simpleMovies();
     var h = '<form class="sbar" data-form="fmsearch" action="#"><input type="search" name="q" autocomplete="off" autocorrect="off" ' +
       'placeholder="Найти фильм: название или режиссёр" value="' + esc(fm.q) + '"><button class="sbtn" type="submit">Найти</button></form>';
     // Фильтры: кнопки «Жанр ▾» и «Год ▾» открывают окно выбора (S.mvfilter); ниже — прокручиваемый ряд жанров
@@ -505,35 +571,46 @@
         TV.arch.search(fm.q, function (err, a) { fill('arsh-q', err || !a || !a.length ? '' : shelf('🎞 Бесплатно — общественное достояние', a, 'fm-ar')); });
       } : null;
     } else {
+      /* С 1.4.0 — две части без повторов: «Фильмы» и «Сериалы» (переключатель), студии — фильтром.
+         Каждый фильм/сериал показывается один раз; серии одного сериала — одной карточкой. */
+      var hasSer = TV.movies.series().length > 0;
+      if (hasSer) h += chips([{ id: 'film', name: '🎬 Фильмы' }, { id: 'series', name: '📺 Сериалы' }], fm.kind, 'fmkind');
+      var studios = TV.movies.studios();
+      if (studios.length > 1 && !TV.lite()) {
+        var stItems = [{ id: '', name: 'Все студии' }];
+        TV.each(studios, function (st) { stItems.push({ id: st, name: st }); });
+        h += chips(stItems, fm.studio, 'fmstudio');
+      }
       var cont = TV.filter(TV.history.all(), function (x) { return x.k !== 'ch' && x.k !== 'yt' && x.k !== 'tr' && x.id && TV.positions.get(x.k + x.id) > 0; });
       if (cont.length) h += shelf('⏯ Продолжить просмотр', cont.slice(0, 15), 'mv-cont');
-      var ready = TV.filter(dls, function (d) { return d.done; });
-      if (ready.length) { var di = []; TV.each(ready, function (d) { di.push(TV.dl.item(d)); }); h += shelf('📥 Скачанные', di, 'mv-dl', 'go', 'movies/downloads'); }
-      // «Новинки» — художественные фильмы (документальные и прочее — в своих полках)
-      var fresh = TV.filter(TV.movies.find({}), function (m) { return m.g !== 'doc' && m.g !== 'other' && m.g !== 'sport'; });
-      h += shelf('🆕 Новинки', TV.movies.items(fresh, 24), 'mv-new', 'fmsel', 'years:y0');
-      // «Можно смотреть бесплатно» — полные фильмы, которые законно доступны: официальные каналы
-      // киностудий (сами правообладатели, в плеере YouTube) и общественное достояние (archive.org)
-      h += '<div class="free-h"><h2>▶ Можно смотреть бесплатно</h2><p class="note">Полные фильмы и сериалы целиком — законно: их выложили сами студии и продюсеры (Star Media, «Мосфильм», «Марс Медиа», киностудия Горького, Госфильмофонд) в плеере Rutube, а также фильмы общественного достояния.</p></div>';
-      var fAll = TV.movies.free({}), fFilm = TV.movies.free({ kind: 'film' }), fSer = TV.movies.free({ kind: 'series' });
-      if (fAll.length) {
-        h += shelf('🆕 Новое бесплатно', TV.movies.freeItems(fAll, 24), 'fr-new', 'go', 'movies/freelist:all');
-        if (fFilm.length) h += shelf('🎬 Фильмы целиком', TV.movies.freeItems(fFilm, 24), 'fr-film', 'go', 'movies/freelist:film');
-        if (fSer.length) h += shelf('📺 Сериалы целиком', TV.movies.freeItems(fSer, 24), 'fr-ser', 'go', 'movies/freelist:series');
-        TV.each(TV.movies.studios(), function (st) {
-          var l = TV.movies.free({ studio: st });
-          if (l.length >= 6) h += shelf('🎞 ' + st, TV.movies.freeItems(l, 20), 'fr-st-' + st, 'go', 'movies/freelist:st-' + st);
-        });
+      if (fm.kind === 'series' && hasSer) {
+        var ser = TV.movies.series({ studio: fm.studio });
+        h += '<div class="free-h"><h2>📺 Сериалы целиком — бесплатно</h2><p class="note">Новые первыми. Их выложили сами студии и продюсеры в плеере Rutube.</p></div>' +
+          (ser.length ? grid(TV.movies.seriesItems(ser), 'ser-all', 'vs') : empty('У этой студии сериалов нет.', '📺'));
+        after = null;
+      } else {
+        var ready = TV.filter(dls, function (d) { return d.done; });
+        if (ready.length) { var di = []; TV.each(ready, function (d) { di.push(TV.dl.item(d)); }); h += shelf('📥 Скачанные', di, 'mv-dl', 'go', 'movies/downloads'); }
+        // 1) Смотреть целиком бесплатно: студии и продюсеры (Rutube), затем общественное достояние
+        var fFilm = TV.movies.free({ kind: 'film', studio: fm.studio });
+        h += '<div class="free-h"><h2>▶ Смотреть бесплатно</h2><p class="note">Полные фильмы целиком — законно: от самих студий и продюсеров (Rutube) и из общественного достояния.</p></div>';
+        if (fFilm.length) h += shelf('🆕 Новые фильмы целиком', TV.movies.freeItems(fFilm, 24), 'fr-film', 'go', 'movies/freelist:film');
+        if (!fm.studio) {
+          if (ytFeedsOk() && !TV.settings.kids) h += placeholder('fdsh-classic', '🎞 Мосфильм и Беларусьфильм — официальные каналы');
+          TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние'); });
+          // 2) Скоро в кино и премьеры — только трейлеры, отдельно от того, что можно смотреть
+          var fresh = TV.filter(TV.movies.find({}), function (m) { return m.g !== 'doc' && m.g !== 'other' && m.g !== 'sport'; }).slice(0, 24), seen = {};
+          TV.each(fresh, function (m) { seen[m.id] = 1; });
+          h += '<div class="free-h"><h2>🎟 Скоро в кино и премьеры</h2><p class="note">Трейлеры новых фильмов и где их посмотреть легально (обычно по подписке).</p></div>';
+          h += shelf('🆕 Премьеры', TV.movies.items(fresh), 'mv-new', 'fmsel', 'years:y0');
+          // по жанрам — без тех, что уже в «Премьерах»; лёгкий режим — пять основных жанров
+          TV.each(TV.lite() ? MV_SHELVES.slice(0, 5) : MV_SHELVES, function (g) {
+            var l = TV.filter(TV.movies.find({ genre: g }), function (m) { return !seen[m.id]; });
+            if (l.length >= 4) h += shelf(TV.movies.genreName(g), TV.movies.items(l, 20), 'mv-' + g, 'fmsel', 'genre:' + g);
+          });
+          h += '<p class="note">Премьеры — официальные данные кинопрокатчиков (Apple TV) и Wikidata, обновляются каждый день. «Общественное достояние» — archive.org.</p>';
+        } else after = null;
       }
-      if (ytFeedsOk() && !TV.settings.kids) h += placeholder('fdsh-classic', '🎞 Мосфильм и Беларусьфильм — официальные каналы');
-      TV.each(archList(), function (s) { h += placeholder('arsh-' + s.id, '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние'); });
-      h += '<div class="free-h"><h2>🎬 Каталог по жанрам</h2><p class="note">Описание, официальный трейлер и где посмотреть.</p></div>';
-      TV.each(MV_SHELVES, function (g) {
-        var l = TV.movies.find({ genre: g });
-        if (l.length >= 4) h += shelf(TV.movies.genreName(g), TV.movies.items(l, 20), 'mv-' + g, 'fmsel', 'genre:' + g);
-      });
-      h += '<p class="note">Каталог — официальные данные кинопрокатчиков (Apple TV) и Wikidata, обновляется каждый день. ' +
-        'У каждого фильма — официальный трейлер и ссылки, где его посмотреть легально. «Бесплатно» — фильмы в общественном достоянии (archive.org).</p>';
     }
     h += '<div class="tools"><button class="btn" data-a="google">🔎 Искать в Google</button>' +
       (TV.dl.available() ? '<button class="btn" data-a="go" data-x="movies/downloads">📥 Загрузки' + (dls.length ? ' (' + dls.length + ')' : '') + '</button>' : '') +
@@ -572,7 +649,7 @@
   /* Можно ли показать подборки официальных каналов YouTube на этом устройстве */
   function ytFeedsOk() {
     var m = TV.settings.showYT ? TV.yt.mode() : 'none';
-    return m === 'mirror' || (m === 'official' && (TV.native || TV.yt.hasKey()));
+    return m === 'mirror' || m === 'official';      // подборки есть везде (data/ytfeeds.json)
   }
   function placeholderBig() { return '<div class="loading-big"><span class="spin"></span></div>'; }
 
@@ -626,9 +703,28 @@
     return { title: title, html: h };
   };
 
+  /* Сериал: все серии по порядку; «▶» первой серии — весь список, дальше серии идут сами (автопереход) */
+  S.series = function (p) {
+    if (!TV.movies.ready()) return { title: 'Сериал', html: placeholderBig(), after: function () { TV.movies.load(function () { if (top().s === 'series') render(true); }); } };
+    var g = TV.movies.seriesByKey(p.id);
+    if (!g) return { title: 'Сериал', html: empty('Сериал не найден — каталог обновился.', '📺') };
+    var items = TV.movies.freeItems(g.eps);
+    TV.each(items, function (it, i) { it.n = g.t + ' — ' + TV.movies.epName(g, g.eps[i]); });
+    reg('ser-eps', items);
+    var h = '<div class="film"><div class="film-p wide">' + (g.img ? '<img src="' + esc(g.img) + '" alt="">' : '') + '</div><div class="film-i"><h2>' + esc(g.t) + '</h2>' +
+      '<div class="film-f">' + esc(g.a + (g.age ? ' · ' + g.age + '+' : '') + ' · ' + g.eps.length + (g.eps.length > 1 ? ' видео' : ' видео (все серии)')) + '</div>' +
+      '<div class="tools"><button class="btn primary" data-a="play" data-l="ser-eps" data-i="0">▶ Смотреть с начала</button></div>' +
+      '<p class="note">Бесплатно, законно — выложено правообладателем в плеере Rutube. Следующая серия включается сама.</p></div></div><div class="rows">';
+    TV.each(g.eps, function (v, i) {
+      h += '<button class="row" data-a="play" data-l="ser-eps" data-i="' + i + '"><span class="ri">' + TV.icon('play') + '</span><span class="rt"><b>' +
+        esc(TV.movies.epName(g, v)) + '</b><small>' + v.min + ' мин</small></span></button>';
+    });
+    return { title: g.t, html: h + '</div>' };
+  };
+
   /* Все бесплатные фильмы/сериалы правообладателей: p.id = all | film | series | st-<студия>; новые первыми */
   S.freelist = function (p) {
-    var id = p.id || 'all', f = {}, title = '🆕 Новое бесплатно';
+    var id = p.id || 'all', f = { studio: fm.studio || undefined }, title = '🆕 Новое бесплатно';
     if (id === 'film') { f.kind = 'film'; title = '🎬 Фильмы целиком'; }
     else if (id === 'series') { f.kind = 'series'; title = '📺 Сериалы целиком'; }
     else if (id.indexOf('st-') === 0) { f.studio = id.slice(3); title = '🎞 ' + f.studio; }
@@ -709,12 +805,16 @@
       jobs.push({ ph: 'arsh-' + s.id, key: 'ar:' + s.id, title: '🎞 ' + s.title.replace(/^\S+\s/, '') + ' — общественное достояние', l: 'arl-' + s.id, more: s.id,
         load: function (cb) { TV.arch.query(s.q, 40, cb, s.sort); } });
     });
-    var i = 0;
+    var i = 0, shown = {};     // один фильм — в одной полке (в архиве он часто лежит сразу в нескольких подборках)
     function nextShelf() {
       if (i >= jobs.length || tab !== 'movies' || stacks.movies.length > 1) return;
       var j = jobs[i++];
       cached(j.key, j.load, function (err, items) {
-        var vids = TV.filter(items || [], function (x) { return x.k !== 'ytc'; });
+        var vids = TV.filter(items || [], function (x) {
+          var t = 't:' + TV.norm(x.n || '');                 // и по названию: один фильм бывает загружен несколько раз
+          if (x.k === 'ytc' || shown[x.id] || shown[t]) return false;
+          shown[x.id] = shown[t] = 1; return true;
+        });
         fill(j.ph, err || !vids.length ? '' : shelf(j.title, vids, j.l, j.more ? 'archshelf' : null, j.more));
         nextShelf();
       });
@@ -893,10 +993,11 @@
     if (pinGate()) return S.pin();
     var s = TV.settings;
     var h = '<div class="rows">' +
-      '<label class="row"><span class="rt"><b>Режим устройства</b><small>Лёгкий: меньше анимаций и картинок, качество до 480p, экономия памяти</small></span>' +
-      sel('mode', [['auto', 'Авто (' + (TV.device.old ? 'лёгкий' : 'полный') + ')'], ['lite', 'Лёгкий'], ['full', 'Полный']], s.mode) + '</label>' +
+      '<label class="row"><span class="rt"><b>Режим устройства</b><small>Простой: только ТВ, Фильмы, Избранное — крупные кнопки, качество до 480p, для старых iPad и слабых ТВ</small></span>' +
+      sel('mode', [['auto', 'Авто (' + (TV.device.old ? 'простой' : 'полный') + ')'], ['lite', 'Простой'], ['full', 'Полный']], s.mode) + '</label>' +
       sw('onlyWorking', 'Только рабочие каналы', 'Прятать каналы, которые не отвечают') +
       sw('autoNext', 'Резервные источники', 'Если канал не ответил — сразу пробовать другой источник') +
+      sw('slowNet', 'Медленный интернет', 'Качество не выше 360p — меньше остановок. Включается сам, если система сообщает о 2G или экономии трафика') +
       sw('logos', 'Логотипы каналов', 'Выключите на очень медленном интернете') +
       sw('safe', 'Безопасный режим', 'Скрывать источники, признанные нежелательными в РФ или экстремистскими в РБ (см. Помощь → Правовая информация)') +
       sw('showYT', 'Вкладка «Видео» (YouTube)', 'Видео и подборки YouTube. Выключите, если не нужно') +
@@ -1005,6 +1106,8 @@
     var t = top(), fn = S[t.s] || S.tv;
     var y = window.pageYOffset;
     var r = fn(t);
+    // На старой iOS символа «▶» нет в шрифтах (рисуется квадратиком) — убираем его из текста
+    if (TV.oldIOS()) { r.title = String(r.title).replace(/▶️?\s?/g, ''); r.html = String(r.html).replace(/▶️?\s?/g, ''); }
     var depth = stacks[tab].length;
     head.innerHTML = (depth > 1 ? '<button class="hbtn back" data-a="back" aria-label="Назад">‹</button>' : '') +
       '<h1>' + esc(r.title) + '</h1><div class="hright">' + (r.right || '') + '</div>';
@@ -1102,7 +1205,10 @@
       case 'rowr': A.rowStep(el, 1); break;
       case 'fmpickg': fm.genre = x; A.back(); window.scrollTo(0, 0); break;     // выбор — сразу к каталогу
       case 'fmpicky': fm.years = x; A.back(); window.scrollTo(0, 0); break;
-      case 'fmreset': fm.genre = 'all'; fm.years = 'all'; fm.q = ''; render(true); break;
+      case 'fmreset': fm.genre = 'all'; fm.years = 'all'; fm.q = ''; fm.studio = ''; render(true); break;
+      case 'fmkind': fm.kind = x === 'series' ? 'series' : 'film'; render(true); break;
+      case 'fmstudio': fm.studio = x || ''; render(true); break;
+      case 'series': push({ s: 'series', id: x }); break;
       case 'fmsel': { var kv = String(x).split(':'); if (kv[0] === 'genre') fm.genre = kv[1]; else fm.years = kv[1]; switchTab('movies', true); stacks.movies = [stacks.movies[0]]; render(); window.scrollTo(0, 0); break; }
       case 'film': push({ s: 'film', id: x }); break;
       case 'trailer': {
@@ -1259,11 +1365,28 @@
   function buildTabs() {
     var tb = '';
     TV.each(TABS, function (t) {
-      if (t.id === 'yt' && !TV.settings.showYT) return;
-      tb += '<button data-a="tab" data-x="' + t.id + '"><span>' + t.icon + '</span>' + t.name + '</button>';
+      // «Видео» прячем и там, где оно не может работать (старая iOS без своего зеркала)
+      if (t.id === 'yt' && (!TV.settings.showYT || TV.yt.mode() === 'none')) return;
+      if (TV.lite() && SIMPLE_HIDE[t.id]) return;      // простой режим — только главное
+      tb += '<button data-a="tab" data-x="' + t.id + '"><span>' + TV.icon(t.icon) + '</span>' + t.name + '</button>';
     });
     document.getElementById('tabbar').innerHTML = tb;
-    if (tab === 'yt' && !TV.settings.showYT) tab = 'tv';
+    if (tab === 'yt' && (!TV.settings.showYT || TV.yt.mode() === 'none')) tab = 'tv';
+    if (TV.lite() && SIMPLE_HIDE[tab]) tab = 'tv';
+  }
+  var SIMPLE_HIDE = { search: 1, yt: 1 };
+
+  /* Простой режим в приложении: сразу включить последний канал (как обычный телевизор) */
+  function autoplayLast(id) {
+    // id — канал из «Продолжить» на главном экране Android TV (открывается в любом режиме)
+    if (!id && (!TV.lite() || !TV.native || TV.player.isOpen() || TV.settings.kids)) return;
+    var x = id ? { id: id } : TV.find(TV.history.all(), function (h) { return h.k === 'ch'; });
+    var c = x && TV.catalog.byId(x.id);
+    if (!c || TV.blocked(c)) return;
+    var all = lists['tv-' + TV.settings.region] || [c], i = -1;
+    TV.each(all, function (it, k) { if (i < 0 && it.id === c.id) i = k; });
+    if (i < 0) { all = [c]; i = 0; }
+    TV.player.open(all, i);
   }
 
   /* ================================================================ запуск */
@@ -1294,6 +1417,7 @@
       TV.settings[k] = k === 'timeout' ? parseInt(v, 10) : v;
       TV.saveSettings();
       if (k === 'ytInstance' || k === 'ytKey' || k === 'ytSource') { cache = {}; yv.res = null; }
+      if (k === 'mode') buildTabs();
       if (k === 'mode' || k === 'font') render(true);
       TV.toast('Сохранено');
     }, false);
@@ -1334,7 +1458,11 @@
       if (bar) bar.outerHTML = scanButton();
     });
     render();
-    TV.yt.discover();
+    var deep = '';
+    try { deep = TV._bridge && TV._bridge.startCh ? String(TV._bridge.startCh() || '') : ''; } catch (e) {}
+    setTimeout(function () { autoplayLast(deep); }, 600);
+    TV.on('openCh', function (d) { if (d && d.ch) { if (TV.player.isOpen()) TV.player.close(); autoplayLast(String(d.ch)); } });
+    if (!TV.lite()) TV.yt.discover();
     autoUpdate();
   };
 })();

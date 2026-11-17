@@ -34,5 +34,7 @@ docs/archive/
 
 # Программа передач — собирается в CI и публикуется на GitHub Pages, в репозиторий не коммитится
 data/epg.json
+data/epg-lite.json
 data/movies.json
 BridgeTV.txt
+data/ytfeeds.json

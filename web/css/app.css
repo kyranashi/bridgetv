@@ -409,3 +409,33 @@ html:not(.touch) .filters.arrows .chips { -webkit-flex: 1; flex: 1; min-width: 0
 .free-h { margin: 22px 0 4px; }
 .free-h h2 { font-size: 20px; margin: 0 0 2px; }
 .free-h .note { margin: 0 0 6px; }
+
+/* ================= 1.3.1: значки SVG, iPad и лёгкий режим ================= */
+/* Свои значки (TV.icon) — вместо символов, которых нет в шрифтах iOS 9 */
+.ic { width: 1em; height: 1em; fill: currentColor; vertical-align: -0.14em; display: inline-block; }
+#tabbar button span .ic { width: 24px; height: 24px; vertical-align: middle; }
+.pbtn .ic { width: 22px; height: 22px; vertical-align: middle; }
+.pbtn.big .ic { width: 26px; height: 26px; }
+/* Лёгкий режим: сплошные цвета вместо градиентов — на iOS 9 градиентная кнопка выходила белой, а текст на ней
+   тоже белый («кнопки без текста»); плюс крупнее кнопки и пункты для пальца */
+html.lite .btn.primary, html.lite .sbtn, html.lite .chip.on, html.lite .p-opt.on, html.lite .p-side-i.cur, html.lite .fbtn.on {
+  background: #4f46e5 !important; background-image: none !important; color: #fff !important;
+}
+html.lite .chip { padding: 12px 18px; font-size: 16px; margin: 0 8px 8px 0; }
+html.lite .btn { padding: 13px 20px; font-size: 16px; }
+html.lite .pbtn { min-width: 52px; min-height: 52px; }
+html.lite #tabbar button { font-size: 13px; }
+/* 1.4.0: страница сериала — широкая обложка */
+.film-p.wide { width: 320px; max-width: 46%; }
+
+/* Простой режим (1.4.0): крупные плитки каналов в 2 колонки, большая кнопка «Продолжить» */
+html.lite .grid.chs.big .card.ch { width: calc(50% - 10px); min-height: 84px; }
+html.lite .grid.chs.big .card.ch .nm { font-size: 18px; }
+html.lite .grid.chs.big .card.ch .num { font-size: 16px; }
+html.lite .big-cont { display: block; width: 100%; margin: 4px 0 14px; padding: 18px; font-size: 19px; text-align: left; }
+html.lite .big-cont .ic { width: 20px; height: 20px; vertical-align: -3px; }
+@media (max-width: 520px) { html.lite .grid.chs.big .card.ch { width: calc(100% - 10px); } }
+@media (min-width: 900px) { html.lite .grid.chs.big .card.ch { width: calc(33.333% - 10px); } }
+
+/* «Не работает» в меню плеера (1.4.0) — заметная кнопка во всю ширину */
+.p-opt.broken { display: block; width: 100%; margin: 4px 0 10px; background: #7a2632; color: #fff; text-align: left; }

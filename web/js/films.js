@@ -166,6 +166,7 @@
      Детский режим — только с возрастной маркой до 6+. */
   M.free = function (f) {
     f = f || {};
+    if (TV.oldIOS()) return [];          // плеер Rutube на iOS 9–11 не работает — не показываем то, что нельзя посмотреть
     var q = TV.norm(f.q || '');
     return TV.filter(FREE, function (v) {
       if (TV.settings.kids && (v.age || 0) > 6) return false;
@@ -181,6 +182,44 @@
     return { k: 'rt', id: v.id, n: v.t, sub: v.a + ' · ' + (v.ser ? 'сериал, ' : '') + v.min + ' мин' + (v.age ? ' · ' + v.age + '+' : ''), img: v.img, len: v.min * 60 };
   };
   M.freeItems = function (list, max) { var out = []; for (var i = 0; i < list.length && (!max || i < max); i++) out.push(M.freeItem(list[i])); return out; };
+  /* Сериалы одной карточкой (1.4.0): части одного сериала («Крёстный. Серии 1 и 2», «… Серии 3 и 4»,
+     «Женщина в беде - 3», «- 4») собираются по названию и студии; серии — по номеру. */
+  function serBase(t) { return String(t || '').replace(/[.,]?\s*(серии|серия)\s.*$/i, '').replace(/\s*[-–]\s*\d+\s*$/, '').replace(/\s+$/, ''); }
+  function serNum(t) {
+    var m = /(серии|серия)\s*(\d+)/i.exec(t);
+    if (m) return parseInt(m[2], 10);
+    m = /(\d+)\s*(серия|серии)/i.exec(t) || /[-–]\s*(\d+)\s*$/.exec(t);      // «…, 3 серия», «… - 4»
+    return m ? parseInt(m[1], 10) : 0;
+  }
+  M.series = function (f) {
+    f = f || {};
+    var map = {}, out = [];
+    TV.each(M.free({ kind: 'series', q: f.q, studio: f.studio }), function (v) {
+      var b = serBase(v.t) || v.t, k = v.a + '|' + TV.norm(b), g = map[k];
+      if (!g) { g = map[k] = { key: k, t: b, a: v.a, date: v.date, age: v.age || 0, eps: [] }; out.push(g); }
+      g.eps.push(v);
+      if (v.date > g.date) g.date = v.date;
+      if ((v.age || 0) > g.age) g.age = v.age;
+    });
+    TV.each(out, function (g) {
+      g.eps.sort(function (a, b) { return serNum(a.full || a.t) - serNum(b.full || b.t) || (a.date < b.date ? -1 : 1); });
+      g.img = g.eps[0].img;
+    });
+    out.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });   // новые первыми
+    return out;
+  };
+  M.seriesItem = function (g) {
+    return { k: 'rts', id: g.key, n: g.t, sub: g.a + ' · ' + (g.eps.length > 1 ? g.eps.length + ' видео' : 'все серии') + (g.age ? ' · ' + g.age + '+' : ''), img: g.img };
+  };
+  M.seriesItems = function (list, max) { var out = []; for (var i = 0; i < list.length && (!max || i < max); i++) out.push(M.seriesItem(list[i])); return out; };
+  M.seriesByKey = function (k) { return TV.find(M.series(), function (g) { return g.key === k; }); };
+  /* Подпись серии внутри сериала: «Серии 3 и 4» (без повторения названия) */
+  M.epName = function (g, v) {
+    var s = v.t.slice(g.t.length).replace(/^[\s.,:–-]+/, '');
+    if (s) return s;
+    var n = serNum(v.full || '');
+    return n ? n + ' серия' : (g.eps.length > 1 ? v.full || v.t : 'Все серии');
+  };
   M.freeById = function (id) { return TV.find(FREE, function (v) { return v.id === id; }); };
   M.byId = function (id) { return TV.find(MV || [], function (m) { return m.id === id; }); };
   /* Карточка для сеток приложения */
@@ -240,6 +279,7 @@
   /* События от приложения: {id, got, size} — прогресс; {id, file, done:true} — готово; {id, err} — ошибка */
   TV.nativeEvent = function (name, data) {
     if (name === 'voice') { TV.emit('voice', data || {}); return; }       // голосовой поиск (Android, 1.0.0)
+    if (name === 'open') { TV.emit('openCh', data || {}); return; }      // «Продолжить» с главного экрана Android TV (1.4.0)
     if (name !== 'dl' || !data) return;
     var list = D.all(), d = TV.find(list, function (x) { return x.id === data.id; });
     if (!d) return;

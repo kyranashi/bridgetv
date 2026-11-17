@@ -146,10 +146,11 @@
   var REL = 'https://github.com/kyranashi/bridgetv/releases/latest/download/';
   // Разрешённые файлы — только эти имена (адрес собирается из этого списка, а не из страницы)
   var FILES = { 'BridgeTV-windows-setup.exe': 1, 'BridgeTV-windows-portable.exe': 1, 'BridgeTV.apk': 1, 'BridgeTV.ipa': 1, 'BridgeTV-linux.AppImage': 1 };
-  var links = document.querySelectorAll('[data-dl]'), i;
+  var links = document.querySelectorAll('[data-dl]'), i, k;
   for (i = 0; i < links.length; i++) {
-    var f = links[i].getAttribute('data-dl');
-    if (FILES[f] === 1) { links[i].href = REL + f; links[i].setAttribute('rel', 'noopener'); }
+    var f = links[i].getAttribute('data-dl'), safe = '';
+    for (k in FILES) if (FILES.hasOwnProperty(k) && k === f) safe = k;   // адрес — только из списка FILES, не из страницы
+    if (safe) { links[i].href = REL + safe; links[i].setAttribute('rel', 'noopener'); }
     else links[i].removeAttribute('href');
   }
 

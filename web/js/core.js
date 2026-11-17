@@ -9,7 +9,7 @@ var TV = window.TV || {};
 window.TV = TV;
 
 TV.APP_NAME = 'BridgeTV';    // название; в коде объект по-прежнему называется TV
-TV.VERSION = '1.3.0';
+TV.VERSION = '1.4.0';
 /* Репозиторий на GitHub (владелец/имя) — отсюда приложения скачивают свежий каталог.
    Заполнить после публикации, напр. 'ivanov/tv'. Пусто — обновление только с локального сервера. */
 TV.REPO = 'kyranashi/bridgetv';
@@ -18,6 +18,9 @@ TV.PAGES = 'https://kyranashi.github.io/bridgetv';
 /* Свой адрес сайта (docs/SITE.md): когда домен подключён, TV.PAGES = 'https://<домен>'. Старый адрес
    GitHub Pages сам перенаправляет на новый, поэтому плееру YouTube доверяем обоим. */
 TV.PAGES_ORIGINS = ['https://kyranashi.github.io'];
+/* Общий поиск YouTube без своего ключа (1.4.0, docs/YT_PROXY.md): адрес своего сервера Cloudflare Worker
+   (server/yt-proxy), который ходит в официальный YouTube Data API со своим ключом. Пусто — выключено. */
+TV.YT_PROXY = '';
 
 /* Нативная оболочка (iOS-приложение) сообщает о себе через window.TV_NATIVE */
 /* Android-оболочка (android/, с 0.2.5): мост window.TVAndroid — данные о приложении и сохранённое
@@ -73,6 +76,32 @@ TV.plural = function (n, one, few, many) {
   return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many;
 };
 TV.isArray = function (a) { return Object.prototype.toString.call(a) === '[object Array]'; };
+
+/* Значки интерфейса (1.3.1): свои простые SVG вместо символов ◀ ▶ ⛶ ⇄ ❚❚ и эмодзи — в шрифтах
+   iOS 9 их нет, и там вместо них были квадратики. SVG рисуется одинаково везде. */
+TV.ICONS = {
+  tv: 'M2 4h20v14H2z M4 6v10h16V6z M8 20h8v2H8z',
+  search: 'M10 3a7 7 0 1 0 4.2 12.6l5.1 5.1 1.4-1.4-5.1-5.1A7 7 0 0 0 10 3z M10 5a5 5 0 1 1 0 10 5 5 0 1 1 0-10z',
+  play: 'M7 4v16l13-8z',
+  pause: 'M6 4h4v16H6z M14 4h4v16h-4z',
+  film: 'M4 3h16v18H4z M6 5v2h2V5z M6 9v2h2V9z M6 13v2h2v-2z M6 17v2h2v-2z M16 5v2h2V5z M16 9v2h2V9z M16 13v2h2v-2z M16 17v2h2v-2z M10 5v14h4V5z',
+  star: 'M12 2l3 6.6 7.2.7-5.4 4.9 1.6 7.1L12 17.6l-6.4 3.7 1.6-7.1L1.8 9.3 9 8.6z',
+  starOff: 'M12 2l3 6.6 7.2.7-5.4 4.9 1.6 7.1L12 17.6l-6.4 3.7 1.6-7.1L1.8 9.3 9 8.6z M12 6.9l-1.7 3.8-4.1.4 3.1 2.8-.9 4 3.6-2.1 3.6 2.1-.9-4 3.1-2.8-4.1-.4z',
+  menu: 'M3 5h18v2H3z M3 11h18v2H3z M3 17h18v2H3z',
+  close: 'M5.6 4.2L12 10.6l6.4-6.4 1.4 1.4-6.4 6.4 6.4 6.4-1.4 1.4-6.4-6.4-6.4 6.4-1.4-1.4 6.4-6.4-6.4-6.4z',
+  down: 'M11 3h2v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6z M4 19h16v2H4z',
+  opts: 'M3 6h11v2H3z M18 6h3v2h-3z M14 4h2v6h-2z M3 16h4v2H3z M11 16h10v2H11z M7 14h2v6H7z',
+  guide: 'M3 5h3v2H3z M8 5h13v2H8z M3 11h3v2H3z M8 11h13v2H8z M3 17h3v2H3z M8 17h13v2H8z',
+  prev: 'M5 4h2v16H5z M20 4v16L9 12z',
+  next: 'M17 4h2v16h-2z M4 4l11 8-11 8z',
+  swap: 'M7 3L2 8l5 5V9h12V7H7z M17 11v4H5v2h12v4l5-5z',
+  fs: 'M3 3h7v2H5v5H3z M14 3h7v7h-2V5h-5z M3 14h2v5h5v2H3z M19 14h2v7h-7v-2h5z'
+};
+TV.icon = function (name) {
+  return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="' + (TV.ICONS[name] || '') + '"/></svg>';
+};
+/* Старая iOS (9–11): нет официальных плееров YouTube и Rutube */
+TV.oldIOS = function () { return !!(TV.device && TV.device.ios && TV.device.iosVer && TV.device.iosVer < 12); };
 TV.filter = function (arr, fn) { var r = []; for (var i = 0; i < arr.length; i++) if (fn(arr[i], i)) r.push(arr[i]); return r; };
 TV.find = function (arr, fn) { for (var i = 0; i < arr.length; i++) if (fn(arr[i], i)) return arr[i]; return null; };
 TV.indexOf = function (arr, fn) { for (var i = 0; i < arr.length; i++) if (fn(arr[i], i)) return i; return -1; };
@@ -125,7 +154,7 @@ TV.ajax = function (url, opts, cb) {
       try { j = JSON.parse(text); } catch (e) { return cb('ответ не JSON'); }
       cb(null, j);
     };
-    TV.callNative({ cmd: 'fetch', id: id, url: url, timeout: opts.timeout || 15000, method: opts.method || 'GET', body: opts.body || null });
+    TV.callNative({ cmd: 'fetch', id: id, url: url, timeout: opts.timeout || 15000, method: opts.method || 'GET', body: opts.body || null, bg: !!opts.bg });
     return null;
   }
   var x = new XMLHttpRequest(), done = false;
@@ -275,10 +304,16 @@ TV.defaults = {
   nextEp: true,          // в конце видео/серии — следующее через 5 с
   font: '100',           // размер текста: 100 | 115 | 130 (%)
   kids: false,           // детский режим (родительский контроль): только детское
-  pin: ''                // PIN родительского контроля (4 цифры), хранится только на устройстве
+  pin: '',               // PIN родительского контроля (4 цифры), хранится только на устройстве
+  slowNet: false         // медленный интернет (1.4.0): качество не выше 360p — меньше остановок
 };
 TV.settings = TV.extend(TV.extend({}, TV.defaults), TV.store.get('settings', {}));
 TV.saveSettings = function () { TV.store.set('settings', TV.settings); TV.applyMode(); };
+/* Медленный интернет: включён вручную или система сама сообщает о 2G / экономии трафика */
+TV.slowNet = function () {
+  var c = navigator.connection;
+  return !!(TV.settings.slowNet || (c && (c.saveData || /2g/.test(c.effectiveType || ''))));
+};
 TV.lite = function () { return TV.settings.mode === 'lite' || (TV.settings.mode === 'auto' && TV.device.old); };
 TV.applyMode = function () {
   var c = document.documentElement.className.replace(/\s*(lite|tvmode|touch|font115|font130|kids)\b/g, '');

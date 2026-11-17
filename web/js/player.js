@@ -30,30 +30,30 @@
       '<div class="p-num"></div>' +
       '<div class="p-ui">' +
       '  <div class="p-top">' +
-      '    <button class="pbtn" data-p="close" aria-label="Назад">✕</button>' +
+      '    <button class="pbtn" data-p="close" aria-label="Назад">' + TV.icon('close') + '</button>' +
       '    <div class="p-title"><b></b><span></span></div>' +
-      '    <button class="pbtn" data-p="dl" aria-label="Скачать" title="Скачать на устройство">⬇</button>' +
-      '    <button class="pbtn" data-p="opts" aria-label="Качество, озвучка, субтитры" title="Качество, озвучка, субтитры">⚙</button>' +
-      '    <button class="pbtn" data-p="guide" aria-label="Программа передач" title="Программа передач">📋</button>' +
-      '    <button class="pbtn" data-p="fav" aria-label="В избранное">☆</button>' +
-      '    <button class="pbtn" data-p="list" aria-label="Список">☰</button>' +
+      '    <button class="pbtn" data-p="dl" aria-label="Скачать" title="Скачать на устройство">' + TV.icon('down') + '</button>' +
+      '    <button class="pbtn" data-p="opts" aria-label="Качество, озвучка, субтитры" title="Качество, озвучка, субтитры">' + TV.icon('opts') + '</button>' +
+      '    <button class="pbtn" data-p="guide" aria-label="Программа передач" title="Программа передач">' + TV.icon('guide') + '</button>' +
+      '    <button class="pbtn" data-p="fav" aria-label="В избранное">' + TV.icon('starOff') + '</button>' +
+      '    <button class="pbtn" data-p="list" aria-label="Список">' + TV.icon('menu') + '</button>' +
       '  </div>' +
       '  <div class="p-bottom">' +
       '    <div class="p-seek"><span class="p-cur">0:00</span><input type="range" min="0" max="1000" value="0" class="p-range"><span class="p-dur">0:00</span></div>' +
       '    <div class="p-row">' +
-      '      <button class="pbtn big" data-p="prev">◀</button>' +
+      '      <button class="pbtn big" data-p="prev" aria-label="Предыдущий">' + TV.icon('prev') + '</button>' +
       '      <button class="pbtn big" data-p="back10">−10</button>' +
       '      <button class="pbtn big" data-p="dvrback" title="Назад по эфиру">−30</button>' +
       '      <button class="pbtn" data-p="golive" title="Вернуться в прямой эфир">В эфир</button>' +
-      '      <button class="pbtn big" data-p="play">❚❚</button>' +
+      '      <button class="pbtn big" data-p="play" aria-label="Пауза">' + TV.icon('pause') + '</button>' +
       '      <button class="pbtn big" data-p="fwd10">+10</button>' +
-      '      <button class="pbtn big" data-p="next">▶</button>' +
-      '      <button class="pbtn" data-p="src" title="Другой источник">⇄</button>' +
-      '      <button class="pbtn" data-p="fs" title="Во весь экран">⛶</button>' +
+      '      <button class="pbtn big" data-p="next" aria-label="Следующий">' + TV.icon('next') + '</button>' +
+      '      <button class="pbtn" data-p="src" title="Другой источник" aria-label="Другой источник">' + TV.icon('swap') + '</button>' +
+      '      <button class="pbtn" data-p="fs" title="Во весь экран" aria-label="Во весь экран">' + TV.icon('fs') + '</button>' +
       '    </div>' +
       '  </div>' +
       '</div>' +
-      '<div class="p-side" data-panel="1"><div class="p-side-h"><span>Каналы</span><button class="pbtn" data-p="sideclose" aria-label="Закрыть список">✕</button></div><div class="p-side-list"></div></div>' +
+      '<div class="p-side" data-panel="1"><div class="p-side-h"><span>Каналы</span><button class="pbtn" data-p="sideclose" aria-label="Закрыть список">' + TV.icon('close') + '</button></div><div class="p-side-list"></div></div>' +
       '<div class="p-opts" data-panel="1"></div>';
     document.body.appendChild(el);
     video = $('#pv');
@@ -66,7 +66,7 @@
     }, false);
 
     video.addEventListener('playing', onPlaying, false);
-    video.addEventListener('loadedmetadata', function () { if (!hls) applyMediaTracks(); }, false);
+    video.addEventListener('loadedmetadata', function () { if (state) state.alive = true; if (!hls) applyMediaTracks(); }, false);
     video.addEventListener('waiting', function () { if (state && state.started) busy(true, 'Буферизация…'); }, false);
     video.addEventListener('error', function () { fail('ошибка воспроизведения'); }, false);
     video.addEventListener('timeupdate', onTime, false);
@@ -273,7 +273,10 @@
 
   /* ------------------------------------------------------------ качество, озвучка, субтитры */
   /* Выбранное качество (высота кадра); 0 — авто. На iPad mini 1 (A5) разумный максимум — 720/1080 H.264 */
-  function wantHeight() { var q = TV.settings.ytQuality; return q === 'auto' ? 0 : parseInt(q, 10) || 720; }
+  function wantHeight() {
+    var q = TV.settings.ytQuality, h = q === 'auto' ? 0 : parseInt(q, 10) || 720;
+    return TV.slowNet() ? (h ? Math.min(h, 360) : 360) : h;     // медленный интернет — не выше 360p
+  }
 
   /* В iOS-приложении встроенный HLS-плеер не даёт выбрать качество и озвучку из JavaScript,
      поэтому видео YouTube идёт через локальный сервер приложения (ios/src/main.m, TVLocalServer):
@@ -386,10 +389,13 @@
 
   function openOpts() {
     $('.p-side').className = 'p-side';
-    var t = state && state.tracks, s = TV.settings, h = '<div class="p-opts-in"><div class="p-opts-h">Настройки видео<button class="pbtn" data-p="optsclose">✕</button></div>';
+    var t = state && state.tracks, s = TV.settings, h = '<div class="p-opts-in"><div class="p-opts-h">Настройки видео<button class="pbtn" data-p="optsclose" aria-label="Закрыть">' + TV.icon('close') + '</button></div>';
     var item = function (kind, val, label, on) {
       return '<button class="p-opt' + (on ? ' on' : '') + '" data-p="opt:' + kind + ':' + TV.esc(val) + '">' + TV.esc(label) + '</button>';
     };
+    h += '<button class="p-opt broken" data-p="broken">⚠ Не работает — переключить</button>';
+    h += '<h4>Таймер сна' + (sleepAt ? ' · осталось ' + Math.max(1, Math.round((sleepAt - TV.now()) / 60000)) + ' мин' : '') + '</h4>';
+    TV.each([0, 30, 60, 90], function (m) { h += item('sleep', String(m), m ? m + ' мин' : 'Выкл', m ? sleepMin === m && !!sleepAt : !sleepAt); });
     var heights = (t && t.heights.length ? t.heights : [1080, 720, 480, 360]);
     h += '<h4>Качество</h4>' + item('q', 'auto', 'Авто', s.ytQuality === 'auto');
     TV.each(heights, function (x) { if (x >= 240 && x <= 1080) h += item('q', String(x), x + 'p' + (x >= 720 ? ' HD' : ''), String(s.ytQuality) === String(x)); });
@@ -406,6 +412,36 @@
     var o = $('.p-opts'); o.innerHTML = h; o.className = 'p-opts open';
     showUi(true);
   }
+  /* Таймер сна (1.4.0): через 30/60/90 минут — пауза и выход из плеера (экран может погаснуть) */
+  var sleepT = null, sleepAt = 0, sleepMin = 0;
+  function setSleep(min) {
+    clearTimeout(sleepT); sleepAt = 0; sleepMin = min;
+    if (!min) { TV.toast('Таймер сна выключен'); return; }
+    sleepAt = TV.now() + min * 60000;
+    sleepT = setTimeout(function () {
+      sleepAt = 0;
+      if (!P.isOpen()) return;
+      try { video.pause(); } catch (e) {}
+      P.close();
+      TV.awake(false);
+    }, min * 60000);
+    TV.toast('🌙 Выключится через ' + min + ' мин');
+  }
+
+  /* «Не работает» (1.4.0): одна кнопка вместо поиска причин — канал: этот источник помечается
+     нерабочим и включается следующий, а если источников больше нет — следующий канал; видео — ещё раз */
+  function broken() {
+    if (!state) return;
+    if (state.isCh && state.variants.length) {
+      TV.health.mark(state.variants[state.vi].u, false);
+      if (state.vi + 1 < state.variants.length) { state.vi++; TV.toast('Пробую другой источник…'); tryVariant(); return; }
+      TV.emit('health');
+      if (state.items.length > 1) { TV.toast('Источников больше нет — следующий канал'); P.step(1); return; }
+      showError('Канал сейчас не отвечает ни по одному источнику.', true); return;
+    }
+    state.started = false; state.vi = 0; TV.toast('Перезапускаю…'); playCurrent();
+  }
+
   function closeOpts() { var o = $('.p-opts'); if (o) o.className = 'p-opts'; scheduleHide(); }
 
   function resolveItem(it, cb) {
@@ -426,7 +462,7 @@
       url = url.replace(/^http:/i, 'https:');
     }
     state.url = url;
-    state.altTried = false; state.mediaRecovered = false;
+    state.altTried = false; state.mediaRecovered = false; state.alive = false;
     var tot = state.variants.length;
     busy(true, state.isCh ? 'Подключаюсь' + (tot > 1 ? ' · источник ' + (state.vi + 1) + ' из ' + tot : '') + '…' : 'Загрузка…');
     load(url, v.h);
@@ -434,6 +470,36 @@
     var sec = TV.settings.timeout || 12;
     if (TV.lite()) sec += 4;
     srcT = setTimeout(function () { if (state && !state.started) fail('таймаут ' + sec + ' с'); }, sec * 1000);
+    if (state.isCh) raceNext();
+  }
+
+  /* Быстрый старт (1.4.0): пока грузится текущий источник, в фоне проверяем плейлисты следующих двух
+     (маленький текстовый файл, не видео). Если текущий за 4 с (лёгкий режим — 6 с) не заиграл,
+     а другой уже ответил настоящим плейлистом, — переходим на ответивший, не дожидаясь таймаута.
+     Где проверка невозможна (CORS в браузере), всё работает как раньше — по таймауту. */
+  var raceT = null;
+  function raceNext() {
+    clearTimeout(raceT);
+    var st = state, from = st.vi, cand = st.variants.slice(from + 1, from + 3), ready = -1;
+    if (!cand.length || !TV.settings.autoNext) return;
+    TV.each(cand, function (v, k) {
+      if (!/^https?:/i.test(v.u) || (location.protocol === 'https:' && /^http:/i.test(v.u))) return;
+      TV.ajax(v.u, { text: true, timeout: 6000 }, function (err, text) {
+        if (state !== st || err || ready >= 0 || !/#EXTM3U/.test(String(text || '').slice(0, 2000))) return;
+        ready = from + 1 + k;
+      });
+    });
+    raceT = setTimeout(function check() {
+      if (state !== st || st.started || st.vi !== from || st.alive) return;   // заиграл или уже ответил — не переключаем
+      if (ready < 0) { raceT = setTimeout(check, 1000); return; }      // ещё никто не ответил — ждём дальше (таймаут как был)
+      clearTimeout(srcT);
+      // текущий не мёртвый, а медленный: ставим его сразу ПОСЛЕ ответившего — если тот не заиграет,
+      // плеер вернётся к нему, а не уйдёт дальше по списку
+      var slow = st.variants.splice(from, 1)[0];
+      st.variants.splice(ready, 0, slow);
+      st.vi = ready - 1;
+      tryVariant();
+    }, (TV.lite() ? 6 : 4) * 1000);
   }
 
   function fail(why) {
@@ -464,6 +530,8 @@
     if (!state.started) {
       state.started = true; state.retried = false;
       if (state.isCh) { TV.health.mark(state.variants[state.vi].u, true); TV.emit('health'); }
+      // Android TV (1.4.0): канал — в ряд «Продолжить» на главном экране телевизора
+      if (state.isCh && state.ch && TV.platform === 'android') TV.callNative({ cmd: 'watchnext', id: state.ch.id, title: state.ch.n, img: /^https?:/.test(state.ch.l || '') ? state.ch.l : '' });
       var it = cur();
       if (state.resumeAt > 1) {               // смена качества — продолжить с того же места
         try { video.currentTime = state.resumeAt; } catch (e) {}
@@ -508,7 +576,8 @@
     stop();
     var isHls = isHlsUrl(url);
     var useHlsJs = isHls && TV.device.mse && (force === 'hlsjs' ||
-      (!force && (!TV.device.nativeHls || (state.preferHlsJs && !TV.device.ios))));
+      (!force && (!TV.device.nativeHls || TV.device.android || (state.preferHlsJs && !TV.device.ios))));
+    // Android (1.4.0): системный плеер WebView медленно стартует и зависает на Xiaomi/Honor — hls.js быстрее
     state.engine = useHlsJs ? 'hlsjs' : 'native';
     if (!useHlsJs) {
       video.src = url;
@@ -522,7 +591,8 @@
       var lite = TV.lite(), yt = !state.isCh && cur() && cur().k === 'yt';
       hls = new Hls({
         // для видео YouTube качество задаёт пользователь (меню ⚙), не размер окна
-        startLevel: lite && !yt ? 0 : -1, capLevelToPlayerSize: !yt, maxBufferLength: lite ? 10 : 30,
+        // телеканалы и лёгкий режим стартуют с самого лёгкого качества — первый кадр быстрее, дальше ABR повышает
+        startLevel: (lite || state.isCh || TV.slowNet()) && !yt ? 0 : -1, capLevelToPlayerSize: !yt, maxBufferLength: lite ? 10 : 30,
         maxMaxBufferLength: lite ? 20 : 60, backBufferLength: lite ? 5 : 30, enableWorker: !lite,
         manifestLoadingTimeOut: 8000, manifestLoadingMaxRetry: 1, levelLoadingTimeOut: 8000, fragLoadingTimeOut: 15000,
         abrEwmaDefaultEstimate: lite ? 300000 : 1000000,
@@ -534,10 +604,11 @@
         hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, applyHlsJs);
       }
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        if (state) state.alive = true;          // источник ответил — «гонка» его не бросит, он просто подгружается
         if (yt) { applyHlsJs(); playSafe(); return; }
-        if (lite && hls.levels) {          // в лёгком режиме — не выше 480p (телеканалы)
-          var cap = -1;
-          TV.each(hls.levels, function (l, i) { if (!l.height || l.height <= 480) cap = i; });
+        if ((lite || TV.slowNet()) && hls.levels) {   // лёгкий режим — не выше 480p, медленный интернет — 360p
+          var cap = -1, maxH = TV.slowNet() ? 360 : 480;
+          TV.each(hls.levels, function (l, i) { if (!l.height || l.height <= maxH) cap = i; });
           if (cap >= 0) hls.autoLevelCapping = cap;
         }
         playSafe();
@@ -598,7 +669,7 @@
   function openGuide() {
     if (!state || !state.ch) return;
     $('.p-side').className = 'p-side';
-    var l = TV.epg.list(state.ch.id), t = TV.now(), day = '', h = '<div class="p-opts-in"><div class="p-opts-h">Программа<button class="pbtn" data-p="optsclose">✕</button></div>';
+    var l = TV.epg.list(state.ch.id), t = TV.now(), day = '', h = '<div class="p-opts-in"><div class="p-opts-h">Программа<button class="pbtn" data-p="optsclose" aria-label="Закрыть">' + TV.icon('close') + '</button></div>';
     TV.each(l, function (p) {
       if (p.b < t - 36e5) return;
       var dt = new Date(p.a), d = DAYS[dt.getDay()] + ', ' + dt.getDate() + ' ' + MONTHS[dt.getMonth()];   // без Intl — его нет в Safari iOS 9
@@ -688,7 +759,7 @@
     var it = cur(), live = state.live || state.isCh, multi = state.items.length > 1;
     el.className = 'open' + (live ? ' live' : ' vod') + (multi ? ' multi' : '') + (state.isCh ? ' ch' : '') + (state.embed ? ' embed' : '') + (uiOn || state.embed ? ' ui' : '');
     var favIt = state.ch ? { k: 'ch', id: state.ch.id, n: state.ch.n, img: state.ch.l } : it;
-    $('[data-p=fav]').textContent = favIt && TV.fav.has(favIt) ? '★' : '☆';
+    $('[data-p=fav]').innerHTML = TV.icon(favIt && TV.fav.has(favIt) ? 'star' : 'starOff');
     $('[data-p=src]').style.display = state.isCh && state.variants.length > 1 ? '' : 'none';
     $('[data-p=guide]').style.display = state.ch && TV.epg && TV.epg.list(state.ch.id).length ? '' : 'none';
     // ⚙ — только в режиме зеркала (у официального плеера YouTube своё меню качества, озвучки и субтитров)
@@ -696,7 +767,7 @@
     $('[data-p=dl]').style.display = TV.dl && TV.dl.canDownload(it) && !TV.dl.get(it.k + ':' + (it.id || it.u)) ? '' : 'none';
     setPlayIcon();
   }
-  function setPlayIcon() { if (el) $('[data-p=play]').textContent = video.paused ? '▶' : '❚❚'; }
+  function setPlayIcon() { if (el) $('[data-p=play]').innerHTML = TV.icon(video.paused ? 'play' : 'pause'); }
 
   function onTime() {
     if (state && (state.live || state.isCh)) { liveTick(); return; }
@@ -785,6 +856,8 @@
     if (!b) { if (!inPanel) P.toggleUi(); return; }
     var a = b.getAttribute('data-p');
     if (a === 'sideclose') { $('.p-side').className = 'p-side'; scheduleHide(); return; }
+    if (a.indexOf('opt:sleep:') === 0) { setSleep(parseInt(a.slice(10), 10) || 0); openOpts(); return; }
+    if (a === 'broken') { closeOpts(); broken(); return; }
     if (a.indexOf('opt:') === 0) { var parts = a.split(':'); setTrackOption(parts[1], parts.slice(2).join(':')); return; }
     if (a === 'opts') { openOpts(); return; }
     if (a === 'guide') { openGuide(); return; }

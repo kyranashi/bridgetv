@@ -32,6 +32,10 @@ from build_catalog import name_key  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOG = os.path.join(ROOT, "data", "catalog.json")
 OUT = os.path.join(ROOT, "data", "epg.json")
+# Облегчённая программа (1.4.0) для простого режима и слабых устройств: те же сутки (сайт собирается раз в день),
+# но только каналы простого режима — первые 40 по номерам, кино и детские (~400 КБ вместо ~1 МБ)
+OUT_LITE = os.path.join(ROOT, "data", "epg-lite.json")
+LITE_NUM, LITE_CATS = 40, ("movies", "kids")
 SOURCES = ["https://epg.pw/xmltv/epg_RU.xml.gz"]
 BEFORE, AFTER = 2 * 3600, 30 * 3600
 # Названия в гиде, которые отличаются от каталога
@@ -98,6 +102,12 @@ def main():
     with io.open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
     print("EPG: каналов %d, передач %d, %d КБ" % (len(out), sum(len(v) for v in out.values()), os.path.getsize(OUT) // 1024))
+    keep = set(c["id"] for c in cat["channels"] if c.get("r") in ("ru", "by")
+               and ((c.get("num") or 999) <= LITE_NUM or c.get("c") in LITE_CATS))
+    lite = {cid: lst for cid, lst in out.items() if cid in keep}
+    with io.open(OUT_LITE, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({"built": now, "src": "epg.pw", "ch": lite}, f, ensure_ascii=False, separators=(",", ":"))
+    print("EPG lite: %d КБ" % (os.path.getsize(OUT_LITE) // 1024))
 
 
 if __name__ == "__main__":
